@@ -14,7 +14,6 @@ import (
 // DashboardHandler aggregates all widget data into a single response.
 type DashboardHandler struct {
 	weather  *service.WeatherService
-	news     *service.NewsService
 	stocks   *service.StocksService
 	calendar *service.CalendarService
 	tasks    *service.TasksService
@@ -25,7 +24,6 @@ type DashboardHandler struct {
 // NewDashboardHandler creates a new DashboardHandler.
 func NewDashboardHandler(
 	weather *service.WeatherService,
-	news *service.NewsService,
 	stocks *service.StocksService,
 	calendar *service.CalendarService,
 	tasks *service.TasksService,
@@ -34,7 +32,6 @@ func NewDashboardHandler(
 ) *DashboardHandler {
 	return &DashboardHandler{
 		weather:  weather,
-		news:     news,
 		stocks:   stocks,
 		calendar: calendar,
 		tasks:    tasks,
@@ -58,16 +55,6 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 			return nil
 		}
 		resp.Weather = &data
-		return nil
-	})
-
-	g.Go(func() error {
-		data, err := h.news.Fetch(gctx)
-		if err != nil {
-			slog.Warn("news unavailable", "error", err)
-			return nil
-		}
-		resp.News = data
 		return nil
 	})
 

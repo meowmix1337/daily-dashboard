@@ -1,4 +1,4 @@
-import type { DashboardResponse, Task, StockQuote, SymbolSearchResult } from '../types/dashboard';
+import type { DashboardResponse, NewsCategory, Task, StockQuote, SymbolSearchResult } from '../types/dashboard';
 
 const BASE = '/api';
 
@@ -15,6 +15,10 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 export function fetchDashboard(): Promise<DashboardResponse> {
   return apiFetch<DashboardResponse>('/dashboard');
+}
+
+export function fetchNews(): Promise<NewsCategory[]> {
+  return apiFetch<NewsCategory[]>('/news');
 }
 
 export function toggleTask(id: string, done: boolean): Promise<Task> {

@@ -5,7 +5,6 @@ type DashboardResponse struct {
 	Weather  *WeatherData    `json:"weather"`   // null = unavailable
 	Calendar []CalendarEvent `json:"calendar"`
 	Tasks    []Task          `json:"tasks"`
-	News     []NewsItem      `json:"news"`      // nil slice = null
 	Stocks   []StockQuote    `json:"stocks"`    // nil slice = null
 	Meta     *MetaData       `json:"meta"`      // null = unavailable
 }
@@ -54,6 +53,12 @@ type NewsItem struct {
 	Source string `json:"source"`
 	Time   string `json:"time"`
 	URL    string `json:"url"`
+}
+
+// NewsCategory is a named group of news articles for one GNews topic.
+type NewsCategory struct {
+	Name  string     `json:"name"`
+	Items []NewsItem `json:"items"`
 }
 
 // StockQuote is a single stock/crypto quote

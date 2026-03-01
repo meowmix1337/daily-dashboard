@@ -28,39 +28,61 @@ func NewNewsService(httpClient *http.Client, apiKey string, cache *CacheService)
 	}
 }
 
-const newsCacheTTL = 30 * time.Minute
+// 3h TTL: 9 categories × 8 cache misses/day = 72 requests, under GNews free tier (100/day).
+const newsCacheTTL = 3 * time.Hour
 
-// Fetch retrieves top news headlines.
-func (s *NewsService) Fetch(ctx context.Context) ([]model.NewsItem, error) {
+var newsCategories = []string{
+	"general", "world", "nation", "business", "technology",
+	"entertainment", "sports", "science", "health",
+}
+
+// Fetch retrieves top news headlines for all categories.
+func (s *NewsService) Fetch(ctx context.Context) ([]model.NewsCategory, error) {
 	const cacheKey = "news"
 	if v, ok := s.cache.Get(cacheKey); ok {
-		return v.([]model.NewsItem), nil
+		return v.([]model.NewsCategory), nil
 	}
-
 	if s.apiKey == "" {
 		return nil, fmt.Errorf("GNEWS_API_KEY not configured")
 	}
-
-	items, err := s.fetchFromAPI(ctx)
+	categories, err := s.fetchAllCategories(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	s.cache.Set(cacheKey, items, newsCacheTTL)
-	return items, nil
+	s.cache.Set(cacheKey, categories, newsCacheTTL)
+	return categories, nil
 }
 
-func (s *NewsService) fetchFromAPI(ctx context.Context) ([]model.NewsItem, error) {
-	url := fmt.Sprintf(
-		"https://gnews.io/api/v4/top-headlines?category=general&country=us&lang=en&max=8&apikey=%s",
-		s.apiKey,
-	)
+// fetchAllCategories fetches each category sequentially, respecting GNews's 1 req/sec rate limit.
+func (s *NewsService) fetchAllCategories(ctx context.Context) ([]model.NewsCategory, error) {
+	out := make([]model.NewsCategory, 0, len(newsCategories))
+	for i, cat := range newsCategories {
+		if i > 0 {
+			select {
+			case <-time.After(time.Second):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		items, err := s.fetchCategory(ctx, cat)
+		if err != nil {
+			slog.Warn("news: category fetch failed", "category", cat, "error", err)
+			items = []model.NewsItem{}
+		}
+		out = append(out, model.NewsCategory{Name: cat, Items: items})
+	}
+	return out, nil
+}
 
+func (s *NewsService) fetchCategory(ctx context.Context, category string) ([]model.NewsItem, error) {
+	url := fmt.Sprintf(
+		"https://gnews.io/api/v4/top-headlines?category=%s&country=us&lang=en&max=8&apikey=%s",
+		category, s.apiKey,
+	)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -70,6 +92,9 @@ func (s *NewsService) fetchFromAPI(ctx context.Context) ([]model.NewsItem, error
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("gnews: status %d for category %s: %s", resp.StatusCode, category, body)
 	}
 
 	var gnewsResp gNewsResponse
