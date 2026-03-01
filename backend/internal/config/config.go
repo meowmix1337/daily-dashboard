@@ -1,0 +1,87 @@
+package config
+
+import (
+	"bufio"
+	"os"
+	"strconv"
+	"strings"
+)
+
+type Config struct {
+	Port            string
+	GNewsAPIKey     string
+	FinnhubAPIKey   string
+	APINinjasAPIKey string
+	ICSCalendarURL  string
+	Latitude        float64
+	Longitude       float64
+}
+
+func Load() *Config {
+	loadDotEnv()
+	lat := parseFloat(os.Getenv("LATITUDE"), 37.7749)
+	lon := parseFloat(os.Getenv("LONGITUDE"), -122.4194)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	return &Config{
+		Port:            port,
+		GNewsAPIKey:     os.Getenv("GNEWS_API_KEY"),
+		FinnhubAPIKey:   os.Getenv("FINNHUB_API_KEY"),
+		APINinjasAPIKey: os.Getenv("API_NINJAS_API_KEY"),
+		ICSCalendarURL:  os.Getenv("CALENDAR_ICS_URL"),
+		Latitude:        lat,
+		Longitude:       lon,
+	}
+}
+
+// loadDotEnv reads a .env file and sets any keys not already present in the
+// environment. It checks the current directory first, then the parent (so the
+// server can be run from either the repo root or the backend/ subdirectory).
+func loadDotEnv() {
+	for _, path := range []string{".env", "../.env"} {
+		if parseDotEnv(path) {
+			return
+		}
+	}
+}
+
+func parseDotEnv(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.Trim(strings.TrimSpace(value), `"'`)
+		if key != "" && os.Getenv(key) == "" {
+			os.Setenv(key, value)
+		}
+	}
+	return true
+}
+
+func parseFloat(s string, def float64) float64 {
+	if s == "" {
+		return def
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return def
+	}
+	return v
+}

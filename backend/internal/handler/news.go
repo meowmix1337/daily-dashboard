@@ -1,0 +1,26 @@
+package handler
+
+import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/daily-dashboard/backend/internal/service"
+)
+
+type NewsHandler struct {
+	service *service.NewsService
+}
+
+func NewNewsHandler(svc *service.NewsService) *NewsHandler {
+	return &NewsHandler{service: svc}
+}
+
+func (h *NewsHandler) Get(w http.ResponseWriter, r *http.Request) {
+	data, err := h.service.Fetch(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
