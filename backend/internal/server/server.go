@@ -51,7 +51,7 @@ func (s *Server) setupRoutes() {
 	weatherSvc := service.NewWeatherService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	newsSvc := service.NewNewsService(httpClient, s.cfg.GNewsAPIKey, cache)
 	stocksSvc := service.NewStocksService(httpClient, s.cfg.FinnhubAPIKey, cache)
-	calendarSvc := service.NewCalendarService(httpClient, s.cfg.ICSCalendarURL, cache)
+	calendarSvc := service.NewCalendarService(httpClient, s.cfg.ICSCalendarURL, cache, s.cfg.Timezone)
 	tasksSvc := service.NewTasksService()
 	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	quotesSvc := service.NewQuotesService(httpClient, s.cfg.APINinjasAPIKey, cache)

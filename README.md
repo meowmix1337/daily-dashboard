@@ -100,6 +100,7 @@ The calendar card reads any standard ICS/iCal feed — no OAuth required.
 | `CALENDAR_ICS_URL` | Private ICS URL for calendar events | Optional | — (unavailable state) |
 | `LATITUDE` | Your location latitude | No | 37.7749 (SF) |
 | `LONGITUDE` | Your location longitude | No | -122.4194 (SF) |
+| `TIMEZONE` | IANA timezone for calendar date filtering (e.g. `America/New_York`) | No | server local (UTC in Docker) |
 | `PORT` | Backend server port | No | 8080 |
 
 ## API Endpoints

@@ -17,3 +17,7 @@ Thumbs.db
 
 # bd / beads issue tracker
 .beads/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

@@ -25,11 +25,15 @@ type CalendarService struct {
 	httpClient *http.Client
 	icsURL     string
 	cache      *CacheService
+	loc        *time.Location
 }
 
 // NewCalendarService creates a new CalendarService.
-func NewCalendarService(httpClient *http.Client, icsURL string, cache *CacheService) *CalendarService {
-	return &CalendarService{httpClient: httpClient, icsURL: icsURL, cache: cache}
+func NewCalendarService(httpClient *http.Client, icsURL string, cache *CacheService, loc *time.Location) *CalendarService {
+	if loc == nil {
+		loc = time.Local
+	}
+	return &CalendarService{httpClient: httpClient, icsURL: icsURL, cache: cache, loc: loc}
 }
 
 // Fetch returns today's calendar events sorted by start time.
@@ -83,9 +87,9 @@ func (s *CalendarService) fetchAndParse(ctx context.Context) ([]model.CalendarEv
 // filterToday extracts events whose DTSTART falls on today in local time,
 // skips cancelled events, and sorts by start time (all-day events first).
 func (s *CalendarService) filterToday(cal *ics.Calendar) []model.CalendarEvent {
-	now := time.Now()
+	now := time.Now().In(s.loc)
 	todayYear, todayMonth, todayDay := now.Date()
-	loc := time.Local
+	loc := s.loc
 
 	type timedEvent struct {
 		start  time.Time
@@ -159,7 +163,7 @@ func (s *CalendarService) filterToday(cal *ics.Calendar) []model.CalendarEvent {
 			results = append(results, timedEvent{
 				start: startLocal,
 				event: model.CalendarEvent{
-					Time:     startLocal.Format("3:04 PM"),
+					Time:     startTime.UTC().Format(time.RFC3339),
 					Title:    title,
 					Color:    color,
 					Duration: duration,
