@@ -65,7 +65,6 @@ func (s *Server) setupRoutes() {
 	metaH := handler.NewMetaHandler(sunriseSvc, quotesSvc)
 	dashboardH := handler.NewDashboardHandler(
 		weatherSvc,
-		newsSvc,
 		stocksSvc,
 		calendarSvc,
 		tasksSvc,

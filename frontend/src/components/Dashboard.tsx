@@ -232,11 +232,7 @@ export default function Dashboard(): React.ReactElement {
               )}
 
               {/* Row 2 */}
-              {data?.news ? (
-                <NewsCard items={data.news} delay={0.5} />
-              ) : (
-                <UnavailableCard span={2} label="News unavailable" />
-              )}
+              <NewsCard delay={0.5} />
               {data?.meta?.quote?.text ? (
                 <QuoteCard data={data.meta.quote} delay={0.6} />
               ) : (

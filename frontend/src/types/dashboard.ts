@@ -39,6 +39,11 @@ export interface NewsItem {
   url: string;
 }
 
+export interface NewsCategory {
+  name: string;
+  items: NewsItem[];
+}
+
 export interface StockQuote {
   symbol: string;
   price: number;
@@ -68,7 +73,6 @@ export interface DashboardResponse {
   weather: WeatherData | null;
   calendar: CalendarEvent[];
   tasks: Task[];
-  news: NewsItem[] | null;
   stocks: StockQuote[] | null;
   meta: MetaData | null;
 }
