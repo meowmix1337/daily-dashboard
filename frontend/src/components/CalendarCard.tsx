@@ -3,6 +3,13 @@ import type { CalendarEvent } from '../types/dashboard';
 import { Card } from './ui/Card';
 import { CardHeader } from './ui/CardHeader';
 
+function formatEventTime(raw: string): string {
+  if (raw === 'All Day') return raw;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 interface CalendarCardProps {
   events: CalendarEvent[];
   delay?: number;
@@ -48,7 +55,7 @@ export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.Re
                 {event.title}
               </div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                {event.time} · {event.duration}
+                {formatEventTime(event.time)} · {event.duration}
               </div>
             </div>
             {i === 0 && (

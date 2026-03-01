@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -15,6 +16,7 @@ type Config struct {
 	ICSCalendarURL  string
 	Latitude        float64
 	Longitude       float64
+	Timezone        *time.Location
 }
 
 func Load() *Config {
@@ -27,6 +29,13 @@ func Load() *Config {
 		port = "8080"
 	}
 
+	tz := time.Local
+	if tzName := os.Getenv("TIMEZONE"); tzName != "" {
+		if loc, err := time.LoadLocation(tzName); err == nil {
+			tz = loc
+		}
+	}
+
 	return &Config{
 		Port:            port,
 		GNewsAPIKey:     os.Getenv("GNEWS_API_KEY"),
@@ -35,6 +44,7 @@ func Load() *Config {
 		ICSCalendarURL:  os.Getenv("CALENDAR_ICS_URL"),
 		Latitude:        lat,
 		Longitude:       lon,
+		Timezone:        tz,
 	}
 }
 
