@@ -16,65 +16,85 @@ interface CalendarCardProps {
 }
 
 export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.ReactElement {
+  const now = new Date();
+
+  const nextIndex = events.findIndex(e => {
+    if (e.time === 'All Day') return false;
+    const t = new Date(e.time);
+    return !isNaN(t.getTime()) && t > now;
+  });
+
+  function isPast(event: CalendarEvent): boolean {
+    if (event.time === 'All Day') return false;
+    const t = new Date(event.time);
+    return !isNaN(t.getTime()) && t < now;
+  }
+
   return (
     <Card delay={delay}>
       <CardHeader icon="▦" title="Today's Schedule" badge={`${events.length} events`} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {events.map((event, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 12px',
-              borderRadius: 10,
-              background: i === 0 ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
-              border: i === 0
-                ? '1px solid rgba(99,102,241,0.2)'
-                : '1px solid transparent',
-              transition: 'all 0.2s',
-            }}
-          >
-            <div style={{
-              width: 3,
-              height: 32,
-              borderRadius: 2,
-              background: event.color,
-              flexShrink: 0,
-            }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
+        {events.map((event, i) => {
+          const past = isPast(event);
+          const isNext = nextIndex !== -1 && i === nextIndex;
+
+          return (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: isNext ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
+                border: isNext
+                  ? '1px solid rgba(99,102,241,0.2)'
+                  : '1px solid transparent',
+                opacity: past ? 0.45 : 1,
+                transition: 'all 0.2s',
+              }}
+            >
               <div style={{
-                fontSize: 14,
-                fontWeight: 500,
-                color: '#e2e2e8',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {event.title}
-              </div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                {formatEventTime(event.time)} · {event.duration}
-              </div>
-            </div>
-            {i === 0 && (
-              <div style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: '#6366f1',
-                background: 'rgba(99,102,241,0.15)',
-                padding: '3px 8px',
-                borderRadius: 20,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
+                width: 3,
+                height: 32,
+                borderRadius: 2,
+                background: event.color,
                 flexShrink: 0,
-              }}>
-                Next
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#e2e2e8',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {event.title}
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                  {formatEventTime(event.time)} · {event.duration}
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+              {isNext && (
+                <div style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: '#6366f1',
+                  background: 'rgba(99,102,241,0.15)',
+                  padding: '3px 8px',
+                  borderRadius: 20,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  flexShrink: 0,
+                }}>
+                  Next
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </Card>
   );
