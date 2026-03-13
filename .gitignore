@@ -18,6 +18,9 @@ Thumbs.db
 # bd / beads issue tracker
 .beads/
 
+# oh-my-claudecode agent state (ephemeral, not source code)
+.omc/
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
