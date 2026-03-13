@@ -52,7 +52,7 @@ type XxxService struct { httpClient *http.Client; apiKey string; cache *CacheSer
 func NewXxxService(...) *XxxService
 func (s *XxxService) Fetch(ctx context.Context) (model.XxxData, error)
 ```
-Each `Fetch` checks the cache first, calls the external API on miss, and returns an error (card shows unavailable state) if the API key is absent or the call fails. Cache TTLs: weather 15m, commute 10m, stocks 5m, news 30m, sunrise 6h, quotes 24h.
+Each `Fetch` checks the cache first, calls the external API on miss, and returns an error (card shows unavailable state) if the API key is absent or the call fails. Cache TTLs: weather 15m, stocks 10s, news 3h, calendar 15m, sunrise 6h, quotes 24h.
 
 **Adding a new widget**: create `internal/service/foo.go` → `internal/handler/foo.go` → register route in `server.go` → add field to `model.DashboardResponse` → add goroutine in `handler/dashboard.go`.
 
@@ -70,13 +70,22 @@ Each `Fetch` checks the cache first, calls the external API on miss, and returns
 | Service | API | Key env var | Fallback |
 |---------|-----|-------------|---------|
 | Weather | Open-Meteo + AQI | none | unavailable state |
-| News | GNews | `GNEWS_API_KEY` | unavailable state |
+| News | GNews (9 categories, sequential 1 req/s) | `GNEWS_API_KEY` | unavailable state |
 | Stocks | Finnhub (equities) + CoinGecko (BTC) | `FINNHUB_API_KEY` | unavailable state |
+| Calendar | ICS feed (parsed with golang-ical) | `CALENDAR_ICS_URL` | unavailable state |
 | Sunrise | sunrise-sunset.org | none | unavailable state |
 | Quote | api.api-ninjas.com/v2/quotes | `API_NINJAS_API_KEY` | unavailable state |
 
 ### Config (env vars → `internal/config/config.go`)
-`PORT` (default 8080), `GNEWS_API_KEY`, `FINNHUB_API_KEY`, `API_NINJAS_API_KEY`, `CALENDAR_ICS_URL`, `LATITUDE`/`LONGITUDE` (default SF 37.7749/-122.4194).
+`PORT` (default 8080), `GNEWS_API_KEY`, `FINNHUB_API_KEY`, `API_NINJAS_API_KEY`, `CALENDAR_ICS_URL`, `LATITUDE`/`LONGITUDE` (default SF 37.7749/-122.4194), `TIMEZONE` (IANA tz name, e.g. `America/New_York`; defaults to server local time — required for correct calendar event filtering).
+
+## Known Limitations
+
+- **Tasks are in-memory only** — lost on server restart. No database yet.
+- **Stocks watchlist is in-memory only** — symbol additions/removals are lost on restart.
+- **No authentication** — all endpoints are public; intended for personal/LAN use.
+- **No tests** — zero test files currently exist in backend or frontend.
+- **News uses sequential fetching** — GNews free tier requires ~1 req/s; 9 categories × 3h cache means full refresh takes ~9s on cache miss.
 
 ## Documentation Rule
 
