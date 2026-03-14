@@ -7,30 +7,22 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Open opens (or creates) the SQLite database at path and configures the
-// connection pool for a single-writer, multi-reader workload.
+// Open opens (or creates) the SQLite database at path and configures it
+// for a single-writer workload with WAL mode and foreign key enforcement.
+// Pragmas are embedded in the DSN so they apply to every new connection.
 func Open(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", path)
+	dsn := fmt.Sprintf(
+		"file:%s?_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)&_pragma=busy_timeout(5000)",
+		path,
+	)
+
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 
-	// SQLite supports one writer at a time; cap write concurrency accordingly.
+	// SQLite supports one writer at a time.
 	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-
-	// Enable WAL mode for better read concurrency and enable foreign keys.
-	pragmas := []string{
-		"PRAGMA journal_mode=WAL",
-		"PRAGMA foreign_keys=ON",
-		"PRAGMA busy_timeout=5000",
-	}
-	for _, p := range pragmas {
-		if _, err := db.Exec(p); err != nil {
-			db.Close()
-			return nil, fmt.Errorf("sqlite pragma (%s): %w", p, err)
-		}
-	}
 
 	if err := db.Ping(); err != nil {
 		db.Close()
