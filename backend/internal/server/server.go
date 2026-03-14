@@ -60,6 +60,10 @@ func (s *Server) setupRoutes() {
 	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	quotesSvc := service.NewQuotesService(httpClient, s.cfg.APINinjasAPIKey, cache)
 
+	// Auth
+	authSvc := service.NewAuthService(s.db, s.cfg.GoogleClientID, s.cfg.GoogleClientSecret, s.cfg.GoogleCallbackURL)
+	authH := handler.NewAuthHandler(authSvc, []byte(s.cfg.SessionSecret), s.cfg.FrontendURL)
+
 	// Handlers
 	weatherH := handler.NewWeatherHandler(weatherSvc)
 	newsH := handler.NewNewsHandler(newsSvc)
@@ -77,6 +81,10 @@ func (s *Server) setupRoutes() {
 	)
 
 	// Routes
+	r.Get("/api/auth/login", authH.Login)
+	r.Get("/api/auth/callback", authH.Callback)
+	r.Post("/api/auth/logout", authH.Logout)
+
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})

@@ -18,6 +18,12 @@ type Config struct {
 	Longitude       float64
 	Timezone        *time.Location
 	SQLitePath      string
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleCallbackURL  string // default: http://localhost:8080/api/auth/callback
+	SessionSecret      string // HMAC key for session cookies; should be 32+ random bytes
+	FrontendURL        string // where to redirect after successful login; default: http://localhost:5173
 }
 
 func Load() *Config {
@@ -37,6 +43,15 @@ func Load() *Config {
 		}
 	}
 
+	callbackURL := os.Getenv("GOOGLE_CALLBACK_URL")
+	if callbackURL == "" {
+		callbackURL = "http://localhost:8080/api/auth/callback"
+	}
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
+
 	return &Config{
 		Port:            port,
 		GNewsAPIKey:     os.Getenv("GNEWS_API_KEY"),
@@ -47,6 +62,12 @@ func Load() *Config {
 		Longitude:       lon,
 		Timezone:        tz,
 		SQLitePath:      sqlitePath(os.Getenv("SQLITE_PATH")),
+
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleCallbackURL:  callbackURL,
+		SessionSecret:      os.Getenv("SESSION_SECRET"),
+		FrontendURL:        frontendURL,
 	}
 }
 
