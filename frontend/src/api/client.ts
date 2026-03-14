@@ -4,6 +4,7 @@ const BASE = '/api';
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
@@ -59,6 +60,7 @@ export function searchSymbols(query: string): Promise<{ results: SymbolSearchRes
 export async function deleteTask(id: string): Promise<void> {
   const res = await fetch(`${BASE}/tasks/${id}`, {
     method: 'DELETE',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) {
