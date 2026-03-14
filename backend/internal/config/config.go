@@ -18,6 +18,12 @@ type Config struct {
 	Longitude       float64
 	Timezone        *time.Location
 	SQLitePath      string
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleCallbackURL  string // e.g. http://localhost:8080/api/auth/callback — required
+	SessionSecret      string // HMAC key for session cookies; must be 32+ bytes — required
+	FrontendURL        string // post-login redirect target — required
 }
 
 func Load() *Config {
@@ -47,6 +53,12 @@ func Load() *Config {
 		Longitude:       lon,
 		Timezone:        tz,
 		SQLitePath:      sqlitePath(os.Getenv("SQLITE_PATH")),
+
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		GoogleCallbackURL:  os.Getenv("GOOGLE_CALLBACK_URL"),
+		SessionSecret:      os.Getenv("SESSION_SECRET"),
+		FrontendURL:        os.Getenv("FRONTEND_URL"),
 	}
 }
 

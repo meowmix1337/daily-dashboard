@@ -22,6 +22,31 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
+	// Fail fast on missing or weak required configuration.
+	// All five OAuth fields must be present — a partial config is always wrong.
+	missing := false
+	for _, check := range []struct {
+		val  string
+		name string
+	}{
+		{cfg.GoogleClientID, "GOOGLE_CLIENT_ID"},
+		{cfg.GoogleClientSecret, "GOOGLE_CLIENT_SECRET"},
+		{cfg.GoogleCallbackURL, "GOOGLE_CALLBACK_URL"},
+		{cfg.FrontendURL, "FRONTEND_URL"},
+	} {
+		if check.val == "" {
+			slog.Error("missing required env var", "var", check.name)
+			missing = true
+		}
+	}
+	if len(cfg.SessionSecret) < 32 {
+		slog.Error("SESSION_SECRET must be at least 32 bytes (generate with: openssl rand -hex 32)")
+		missing = true
+	}
+	if missing {
+		os.Exit(1)
+	}
+
 	db, err := database.Open(cfg.SQLitePath)
 	if err != nil {
 		slog.Error("failed to open database", "error", err)
