@@ -18,13 +18,13 @@ async function fetchMe(): Promise<User> {
 }
 
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<User, Error>({
+  const { data: user, isLoading, error, status } = useQuery<User, Error>({
     queryKey: ['auth', 'me'],
     queryFn: fetchMe,
     retry: false,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
-  const isAuthenticated = !!user && !(error instanceof AuthError);
+  const isAuthenticated = status === 'success';
   return { user: user ?? null, isLoading, isAuthenticated, error };
 }
