@@ -1,13 +1,14 @@
 package server
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+
+	"github.com/jmoiron/sqlx"
 
 	"github.com/daily-dashboard/backend/internal/config"
 	"github.com/daily-dashboard/backend/internal/handler"
@@ -19,11 +20,11 @@ import (
 type Server struct {
 	router *chi.Mux
 	cfg    *config.Config
-	db     *sql.DB
+	db     *sqlx.DB // used by service constructors added in subsequent PRs
 }
 
 // New creates a new Server with all services, handlers, and routes registered.
-func New(cfg *config.Config, db *sql.DB) *Server {
+func New(cfg *config.Config, db *sqlx.DB) *Server {
 	s := &Server{
 		router: chi.NewRouter(),
 		cfg:    cfg,

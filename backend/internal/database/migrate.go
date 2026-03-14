@@ -1,21 +1,25 @@
 package database
 
 import (
-	"database/sql"
-	"embed"
+	"context"
+	"fmt"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
+
+	"github.com/daily-dashboard/backend/migrations"
 )
 
-//go:embed migrations/*.sql
-var migrationsFS embed.FS
-
 // Migrate runs all pending database migrations using goose.
-// Migration files live in internal/database/migrations/ and are embedded at build time.
-func Migrate(db *sql.DB) error {
-	goose.SetBaseFS(migrationsFS)
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return err
+// Migration SQL files live in backend/migrations/ and are embedded at build time.
+// It accepts a context so callers can enforce a startup timeout.
+func Migrate(ctx context.Context, db *sqlx.DB) error {
+	// goose.NewProvider expects the FS rooted at the migrations directory.
+	// Pass the underlying *sql.DB — goose does not need sqlx.
+	provider, err := goose.NewProvider(goose.DialectSQLite3, db.DB, migrations.FS)
+	if err != nil {
+		return fmt.Errorf("goose provider: %w", err)
 	}
-	return goose.Up(db, "migrations")
+	_, err = provider.Up(ctx)
+	return err
 }

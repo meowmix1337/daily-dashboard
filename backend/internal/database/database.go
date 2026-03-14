@@ -1,28 +1,31 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
+	"net/url"
 
+	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
 
-// Open opens (or creates) the SQLite database at path and configures it
-// for a single-writer workload with WAL mode and foreign key enforcement.
+// Open opens (or creates) the SQLite database at path and returns a *sqlx.DB
+// configured for a single-writer workload with WAL mode and foreign key enforcement.
 // Pragmas are embedded in the DSN so they apply to every new connection.
-func Open(path string) (*sql.DB, error) {
+func Open(path string) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf(
 		"file:%s?_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)&_pragma=busy_timeout(5000)",
-		path,
+		url.PathEscape(path),
 	)
 
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sqlx.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 
-	// SQLite supports one writer at a time.
+	// SQLite supports one writer at a time; cap to prevent "database is locked" errors.
 	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0) // no expiry — connections are cheap for SQLite
 
 	if err := db.Ping(); err != nil {
 		db.Close()

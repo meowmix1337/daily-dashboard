@@ -29,7 +29,9 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := database.Migrate(db); err != nil {
+	migrateCtx, migrateCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer migrateCancel()
+	if err := database.Migrate(migrateCtx, db); err != nil {
 		slog.Error("failed to run migrations", "error", err)
 		os.Exit(1)
 	}
