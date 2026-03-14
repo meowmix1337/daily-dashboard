@@ -21,9 +21,9 @@ type Config struct {
 
 	GoogleClientID     string
 	GoogleClientSecret string
-	GoogleCallbackURL  string // default: http://localhost:8080/api/auth/callback
-	SessionSecret      string // HMAC key for session cookies; should be 32+ random bytes
-	FrontendURL        string // where to redirect after successful login; default: http://localhost:5173
+	GoogleCallbackURL  string // e.g. http://localhost:8080/api/auth/callback — required
+	SessionSecret      string // HMAC key for session cookies; must be 32+ bytes — required
+	FrontendURL        string // post-login redirect target — required
 }
 
 func Load() *Config {
@@ -43,15 +43,6 @@ func Load() *Config {
 		}
 	}
 
-	callbackURL := os.Getenv("GOOGLE_CALLBACK_URL")
-	if callbackURL == "" {
-		callbackURL = "http://localhost:8080/api/auth/callback"
-	}
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
-	}
-
 	return &Config{
 		Port:            port,
 		GNewsAPIKey:     os.Getenv("GNEWS_API_KEY"),
@@ -65,9 +56,9 @@ func Load() *Config {
 
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		GoogleCallbackURL:  callbackURL,
+		GoogleCallbackURL:  os.Getenv("GOOGLE_CALLBACK_URL"),
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
-		FrontendURL:        frontendURL,
+		FrontendURL:        os.Getenv("FRONTEND_URL"),
 	}
 }
 
