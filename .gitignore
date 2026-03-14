@@ -21,6 +21,9 @@ Thumbs.db
 # oh-my-claudecode agent state (ephemeral, not source code)
 .omc/
 
+# Serena MCP server (local analysis cache and memories)
+.serena/
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
