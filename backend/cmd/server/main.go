@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/daily-dashboard/backend/internal/config"
+	"github.com/daily-dashboard/backend/internal/database"
 	"github.com/daily-dashboard/backend/internal/server"
 )
 
@@ -21,7 +22,19 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	srv := server.New(cfg)
+	db, err := database.Open(cfg.SQLitePath)
+	if err != nil {
+		slog.Error("failed to open database", "error", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	if err := database.Migrate(db); err != nil {
+		slog.Error("failed to run migrations", "error", err)
+		os.Exit(1)
+	}
+
+	srv := server.New(cfg, db)
 
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Port,

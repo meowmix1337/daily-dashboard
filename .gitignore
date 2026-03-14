@@ -27,3 +27,5 @@ Thumbs.db
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+*.db-shm
+*.db-wal

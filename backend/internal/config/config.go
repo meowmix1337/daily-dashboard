@@ -17,6 +17,7 @@ type Config struct {
 	Latitude        float64
 	Longitude       float64
 	Timezone        *time.Location
+	SQLitePath      string
 }
 
 func Load() *Config {
@@ -45,6 +46,7 @@ func Load() *Config {
 		Latitude:        lat,
 		Longitude:       lon,
 		Timezone:        tz,
+		SQLitePath:      sqlitePath(os.Getenv("SQLITE_PATH")),
 	}
 }
 
@@ -83,6 +85,13 @@ func parseDotEnv(path string) bool {
 		}
 	}
 	return true
+}
+
+func sqlitePath(s string) string {
+	if s == "" {
+		return "dashboard.db"
+	}
+	return s
 }
 
 func parseFloat(s string, def float64) float64 {

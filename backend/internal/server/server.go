@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -18,13 +19,15 @@ import (
 type Server struct {
 	router *chi.Mux
 	cfg    *config.Config
+	db     *sql.DB
 }
 
 // New creates a new Server with all services, handlers, and routes registered.
-func New(cfg *config.Config) *Server {
+func New(cfg *config.Config, db *sql.DB) *Server {
 	s := &Server{
 		router: chi.NewRouter(),
 		cfg:    cfg,
+		db:     db,
 	}
 	s.setupRoutes()
 	return s
