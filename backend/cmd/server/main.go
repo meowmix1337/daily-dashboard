@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,7 +25,6 @@ func main() {
 	slog.SetDefault(logger)
 
 	// Fail fast on missing or weak required configuration.
-	// All five OAuth fields must be present — a partial config is always wrong.
 	missing := false
 	for _, check := range []struct {
 		val  string
@@ -39,10 +40,25 @@ func main() {
 			missing = true
 		}
 	}
-	if len(cfg.SessionSecret) < 32 {
-		slog.Error("SESSION_SECRET must be at least 32 bytes (generate with: openssl rand -hex 32)")
+
+	// Decode session secret from hex; must be at least 32 bytes (64 hex chars).
+	sessionKey, err := hex.DecodeString(cfg.SessionSecret)
+	if err != nil || len(sessionKey) < 32 {
+		slog.Error("SESSION_SECRET must be a valid hex string of at least 64 chars (openssl rand -hex 32)")
 		missing = true
+	} else {
+		cfg.SessionKey = sessionKey
 	}
+
+	// Validate FRONTEND_URL is an absolute http(s) URL to prevent open redirects.
+	if cfg.FrontendURL != "" {
+		if u, parseErr := url.Parse(cfg.FrontendURL); parseErr != nil ||
+			(u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			slog.Error("FRONTEND_URL must be an absolute http(s) URL", "value", cfg.FrontendURL)
+			missing = true
+		}
+	}
+
 	if missing {
 		os.Exit(1)
 	}

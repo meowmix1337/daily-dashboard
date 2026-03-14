@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"log/slog"
 	"net/http"
@@ -15,16 +16,18 @@ const sessionMaxAge = int(7 * 24 * time.Hour / time.Second) // 7 days in seconds
 
 // AuthHandler serves the Google OAuth login / callback / logout endpoints.
 type AuthHandler struct {
-	authSvc    *service.AuthService
-	sessionKey []byte
-	successURL string // where to redirect after a successful login
+	authSvc       *service.AuthService
+	sessionKey    []byte
+	successURL    string // where to redirect after a successful login
+	secureCookies bool
 }
 
-func NewAuthHandler(authSvc *service.AuthService, sessionKey []byte, successURL string) *AuthHandler {
+func NewAuthHandler(authSvc *service.AuthService, sessionKey []byte, successURL string, secureCookies bool) *AuthHandler {
 	return &AuthHandler{
-		authSvc:    authSvc,
-		sessionKey: sessionKey,
-		successURL: successURL,
+		authSvc:       authSvc,
+		sessionKey:    sessionKey,
+		successURL:    successURL,
+		secureCookies: secureCookies,
 	}
 }
 
@@ -41,6 +44,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   300, // 5 minutes — just long enough to complete the flow
 		HttpOnly: true,
+		Secure:   h.secureCookies,
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, h.authSvc.AuthCodeURL(state), http.StatusFound)
@@ -48,14 +52,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 // Callback handles the redirect from Google after the user consents.
 func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
-	// --- CSRF state check ---
+	// --- CSRF state check (constant-time to prevent timing attacks) ---
 	stateCookie, err := r.Cookie("oauth_state")
-	if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
+	stateParam := r.URL.Query().Get("state")
+	if err != nil || stateCookie.Value == "" ||
+		subtle.ConstantTimeCompare([]byte(stateCookie.Value), []byte(stateParam)) != 1 {
 		http.Error(w, "invalid oauth state", http.StatusBadRequest)
 		return
 	}
 	// Immediately expire the state cookie.
-	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Value: "", Path: "/", MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: h.secureCookies, SameSite: http.SameSiteLaxMode})
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -95,9 +101,8 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   sessionMaxAge,
 		HttpOnly: true,
+		Secure:   h.secureCookies,
 		SameSite: http.SameSiteLaxMode,
-		// Secure is intentionally omitted here; set it at the reverse-proxy
-		// layer (nginx) or add a config flag when TLS is enabled.
 	})
 
 	http.Redirect(w, r, h.successURL, http.StatusFound)
@@ -106,10 +111,13 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 // Logout clears the session cookie.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   session.CookieName,
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
+		Name:     session.CookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   h.secureCookies,
+		SameSite: http.SameSiteLaxMode,
 	})
 	w.WriteHeader(http.StatusNoContent)
 }

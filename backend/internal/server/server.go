@@ -62,8 +62,8 @@ func (s *Server) setupRoutes() {
 
 	// Auth
 	authSvc := service.NewAuthService(s.db, s.cfg.GoogleClientID, s.cfg.GoogleClientSecret, s.cfg.GoogleCallbackURL)
-	authH := handler.NewAuthHandler(authSvc, []byte(s.cfg.SessionSecret), s.cfg.FrontendURL)
-	requireAuth := middleware.RequireAuth([]byte(s.cfg.SessionSecret))
+	authH := handler.NewAuthHandler(authSvc, s.cfg.SessionKey, s.cfg.FrontendURL, s.cfg.SecureCookies)
+	requireAuth := middleware.RequireAuth(s.cfg.SessionKey)
 	meH := handler.NewMeHandler()
 
 	// Handlers
@@ -82,30 +82,35 @@ func (s *Server) setupRoutes() {
 		quotesSvc,
 	)
 
-	// Routes
-	r.Get("/api/auth/login", authH.Login)
-	r.Get("/api/auth/callback", authH.Callback)
-	r.Post("/api/auth/logout", authH.Logout)
-	r.With(requireAuth).Get("/api/auth/me", meH.Get)
-
+	// Public routes — no session required
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
+	r.Get("/api/auth/login", authH.Login)
+	r.Get("/api/auth/callback", authH.Callback)
+	r.Post("/api/auth/logout", authH.Logout)
 
-	r.Get("/api/dashboard", dashboardH.Get)
-	r.Get("/api/weather", weatherH.Get)
-	r.Get("/api/news", newsH.Get)
-	r.Get("/api/stocks", stocksH.Get)
-	r.Get("/api/stocks/watchlist", stocksH.GetWatchlist)
-	r.Post("/api/stocks/watchlist", stocksH.AddSymbol)
-	r.Delete("/api/stocks/watchlist/{symbol}", stocksH.RemoveSymbol)
-	r.Get("/api/stocks/search", stocksH.SearchSymbols)
-	r.Get("/api/calendar", calendarH.Get)
-	r.Get("/api/meta", metaH.Get)
+	// Protected routes — valid session cookie required
+	r.Group(func(r chi.Router) {
+		r.Use(requireAuth)
 
-	r.Get("/api/tasks", tasksH.List)
-	r.Post("/api/tasks", tasksH.Create)
-	r.Patch("/api/tasks/{id}", tasksH.Update)
-	r.Delete("/api/tasks/{id}", tasksH.Delete)
+		r.Get("/api/auth/me", meH.Get)
+
+		r.Get("/api/dashboard", dashboardH.Get)
+		r.Get("/api/weather", weatherH.Get)
+		r.Get("/api/news", newsH.Get)
+		r.Get("/api/stocks", stocksH.Get)
+		r.Get("/api/stocks/watchlist", stocksH.GetWatchlist)
+		r.Post("/api/stocks/watchlist", stocksH.AddSymbol)
+		r.Delete("/api/stocks/watchlist/{symbol}", stocksH.RemoveSymbol)
+		r.Get("/api/stocks/search", stocksH.SearchSymbols)
+		r.Get("/api/calendar", calendarH.Get)
+		r.Get("/api/meta", metaH.Get)
+
+		r.Get("/api/tasks", tasksH.List)
+		r.Post("/api/tasks", tasksH.Create)
+		r.Patch("/api/tasks/{id}", tasksH.Update)
+		r.Delete("/api/tasks/{id}", tasksH.Delete)
+	})
 }

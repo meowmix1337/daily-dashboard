@@ -22,8 +22,10 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleCallbackURL  string // e.g. http://localhost:8080/api/auth/callback — required
-	SessionSecret      string // HMAC key for session cookies; must be 32+ bytes — required
+	SessionSecret      string // raw hex value of SESSION_SECRET env var
+	SessionKey         []byte // decoded bytes of SessionSecret; populated by main after validation
 	FrontendURL        string // post-login redirect target — required
+	SecureCookies      bool   // set Secure flag on cookies; default true, disable only for local HTTP dev
 }
 
 func Load() *Config {
@@ -59,6 +61,7 @@ func Load() *Config {
 		GoogleCallbackURL:  os.Getenv("GOOGLE_CALLBACK_URL"),
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
 		FrontendURL:        os.Getenv("FRONTEND_URL"),
+		SecureCookies:      os.Getenv("SECURE_COOKIES") != "false",
 	}
 }
 
