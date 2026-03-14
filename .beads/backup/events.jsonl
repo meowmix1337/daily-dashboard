@@ -2,3 +2,22 @@
 {"actor":"Dave Van","comment":null,"created_at":"2026-03-01T10:04:44Z","event_type":"closed","id":2,"issue_id":"daily_dashboard-691","new_value":"Closed","old_value":""}
 {"actor":"Dave Van","comment":null,"created_at":"2026-03-01T10:27:01Z","event_type":"created","id":3,"issue_id":"daily_dashboard-8po","new_value":"","old_value":""}
 {"actor":"Dave Van","comment":null,"created_at":"2026-03-01T10:32:05Z","event_type":"closed","id":4,"issue_id":"daily_dashboard-8po","new_value":"Closed","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:23:06Z","event_type":"created","id":5,"issue_id":"daily_dashboard-mcw","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:23:36Z","event_type":"created","id":6,"issue_id":"daily_dashboard-xbv","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:23:58Z","event_type":"created","id":7,"issue_id":"daily_dashboard-qfv","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:24:10Z","event_type":"created","id":8,"issue_id":"daily_dashboard-owg","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:24:25Z","event_type":"created","id":9,"issue_id":"daily_dashboard-0jc","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:24:51Z","event_type":"created","id":10,"issue_id":"daily_dashboard-bqy","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:25:07Z","event_type":"created","id":11,"issue_id":"daily_dashboard-1ek","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:25:33Z","event_type":"created","id":12,"issue_id":"daily_dashboard-rzb","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:26:14Z","event_type":"created","id":13,"issue_id":"daily_dashboard-2gj","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-12T23:26:41Z","event_type":"created","id":14,"issue_id":"daily_dashboard-8vq","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T09:02:52Z","event_type":"created","id":15,"issue_id":"daily_dashboard-a65","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:04Z","event_type":"created","id":16,"issue_id":"daily_dashboard-cuc","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:05Z","event_type":"created","id":17,"issue_id":"daily_dashboard-u7d","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:40Z","event_type":"created","id":18,"issue_id":"daily_dashboard-drf","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:40Z","event_type":"created","id":19,"issue_id":"daily_dashboard-4k7","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:49Z","event_type":"created","id":20,"issue_id":"daily_dashboard-4qu","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:49Z","event_type":"created","id":21,"issue_id":"daily_dashboard-p18","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T10:55:49Z","event_type":"created","id":22,"issue_id":"daily_dashboard-d1h","new_value":"","old_value":""}
+{"actor":"Dave Van","comment":null,"created_at":"2026-03-14T11:03:34Z","event_type":"claimed","id":23,"issue_id":"daily_dashboard-a65","new_value":"{\"assignee\":\"Dave Van\",\"status\":\"in_progress\"}","old_value":"{\"id\":\"daily_dashboard-a65\",\"title\":\"Set up SQLite data store scaffolding\",\"description\":\"Create the foundational database layer before any service-level persistence. Includes: SQLite connection/pool setup, migration runner (run on startup), shared DB instance wired through dependency injection in server.go. This unblocks both task persistence and stocks watchlist persistence.\",\"status\":\"open\",\"priority\":1,\"issue_type\":\"task\",\"owner\":\"57775817+meowmix1337@users.noreply.github.com\",\"created_at\":\"2026-03-14T13:02:53Z\",\"created_by\":\"Dave Van\",\"updated_at\":\"2026-03-14T13:02:53Z\"}"}
