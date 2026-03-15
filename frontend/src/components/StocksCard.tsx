@@ -71,6 +71,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
       marginBottom: 20,
       overflow: 'visible',
       position: 'relative',
+      zIndex: showAddForm ? 10 : undefined,
       opacity: loaded ? 1 : 0,
       transform: loaded ? 'translateY(0)' : 'translateY(12px)',
       transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
