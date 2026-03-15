@@ -76,6 +76,7 @@ export default function Dashboard(): React.ReactElement {
   const { theme, toggleTheme } = useTheme();
   const now = useClock();
   const [headerLoaded, setHeaderLoaded] = useState(false);
+  const [toggleHovered, setToggleHovered] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setHeaderLoaded(true), 100);
@@ -132,7 +133,7 @@ export default function Dashboard(): React.ReactElement {
             <div style={{
               fontSize: 14,
               fontWeight: 500,
-              color: '#6366f1',
+              color: 'var(--text-accent)',
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
               marginBottom: 8,
@@ -170,7 +171,10 @@ export default function Dashboard(): React.ReactElement {
             </div>
             <button
               onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onMouseEnter={() => setToggleHovered(true)}
+              onMouseLeave={() => setToggleHovered(false)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -178,7 +182,7 @@ export default function Dashboard(): React.ReactElement {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                background: 'var(--toggle-bg)',
+                background: toggleHovered ? 'var(--toggle-hover-bg)' : 'var(--toggle-bg)',
                 border: '1px solid var(--toggle-border)',
                 color: 'var(--toggle-text)',
                 cursor: 'pointer',
@@ -186,8 +190,6 @@ export default function Dashboard(): React.ReactElement {
                 flexShrink: 0,
                 transition: 'background 0.2s ease',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--toggle-hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--toggle-bg)')}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
@@ -201,22 +203,22 @@ export default function Dashboard(): React.ReactElement {
             marginBottom: 20,
             padding: '12px 16px',
             borderRadius: 10,
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.2)',
+            background: 'var(--error-bg)',
+            border: '1px solid var(--error-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}>
-            <span style={{ fontSize: 14, color: '#ef4444' }}>
+            <span style={{ fontSize: 14, color: 'var(--error-text)' }}>
               Failed to load dashboard data
             </span>
             <button
               onClick={() => refetch()}
               style={{
                 fontSize: 13,
-                color: '#ef4444',
-                background: 'rgba(239,68,68,0.15)',
-                border: '1px solid rgba(239,68,68,0.3)',
+                color: 'var(--error-text)',
+                background: 'var(--error-button-bg)',
+                border: '1px solid var(--error-button-border)',
                 borderRadius: 6,
                 padding: '4px 12px',
                 cursor: 'pointer',

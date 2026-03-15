@@ -14,9 +14,9 @@ export function LoginPage() {
   if (isAuthenticated) return <Navigate to="/" replace />;
 
   const cardStyle = {
-    background: 'rgba(255,255,255,0.025)',
+    background: 'var(--bg-card)',
     backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    border: '1px solid var(--bg-card-border)',
     borderRadius: 16,
     padding: 48,
     textAlign: 'center',
@@ -46,17 +46,17 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0a0a0f',
+      background: 'var(--bg-primary)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '0 16px',
     }}>
       <div style={cardStyle}>
-        <h1 style={{ color: '#f1f5f9', fontSize: '1.5rem', fontWeight: 700, marginBottom: 8, marginTop: 0 }}>
+        <h1 style={{ color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 700, marginBottom: 8, marginTop: 0 }}>
           Daily Dashboard
         </h1>
-        <p style={{ color: '#94a3b8', marginBottom: 32, marginTop: 0, fontSize: '1rem' }}>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: 32, marginTop: 0, fontSize: '1rem' }}>
           Sign in to access your personal dashboard
         </p>
         <button
