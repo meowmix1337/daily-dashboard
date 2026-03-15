@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useClock } from '../hooks/useClock';
+import { useAuth } from '../hooks/useAuth';
 import { WeatherCard } from './WeatherCard';
 import { CalendarCard } from './CalendarCard';
 import { TasksCard } from './TasksCard';
 import { NewsCard } from './NewsCard';
 import { StocksCard } from './StocksCard';
 import { QuoteCard } from './QuoteCard';
+import { UserProfile } from './UserProfile';
 import { UnavailableCard } from './ui/UnavailableCard';
 
 function getGreeting(date: Date): string {
@@ -69,6 +71,7 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
 
 export default function Dashboard(): React.ReactElement {
   const { data, isLoading, isError, refetch } = useDashboard();
+  const { user } = useAuth();
   const now = useClock();
   const [headerLoaded, setHeaderLoaded] = useState(false);
 
@@ -145,28 +148,24 @@ export default function Dashboard(): React.ReactElement {
               {getGreeting(now)}
             </h1>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 32,
-              fontWeight: 500,
-              color: '#f0f0f5',
-              letterSpacing: '-0.02em',
-            }}>
-              {formatTime(now)}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 32,
+                fontWeight: 500,
+                color: '#f0f0f5',
+                letterSpacing: '-0.02em',
+              }}>
+                {formatTime(now)}
+              </div>
+              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                {data?.meta?.sunrise
+                  ? `☀️ ${data.meta.sunrise} → 🌙 ${data.meta.sunset} · ${data.meta.daylight} daylight`
+                  : '☀️ — → 🌙 — · — daylight'}
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-              {data?.meta?.sunrise
-                ? `☀️ ${data.meta.sunrise} → 🌙 ${data.meta.sunset} · ${data.meta.daylight} daylight`
-                : '☀️ — → 🌙 — · — daylight'}
-            </div>
-            <button
-              type="button"
-              onClick={() => { fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => { window.location.href = '/login'; }); }}
-              style={{ marginTop: 8, fontSize: 12, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
-            >
-              Sign out
-            </button>
+            {user && <UserProfile user={user} />}
           </div>
         </div>
 

@@ -17,6 +17,7 @@ type Data struct {
 	UserID    string `json:"user_id"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url,omitempty"`
 	ExpiresAt int64  `json:"exp"` // Unix timestamp; token is invalid after this time
 }
 

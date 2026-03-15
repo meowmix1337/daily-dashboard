@@ -22,8 +22,9 @@ func (h *MeHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"user_id": sess.UserID,
-		"email":   sess.Email,
-		"name":    sess.Name,
+		"user_id":    sess.UserID,
+		"email":      sess.Email,
+		"name":       sess.Name,
+		"avatar_url": sess.AvatarURL,
 	})
 }
