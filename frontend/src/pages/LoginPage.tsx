@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/', { replace: true });
-    }
-  }, [isLoading, isAuthenticated, navigate]);
+  // Show nothing while auth check is in flight to prevent flash of login UI
+  if (isLoading) return null;
+
+  // Already authenticated — redirect to dashboard immediately (no useEffect delay)
+  if (isAuthenticated) return <Navigate to="/" replace />;
 
   const cardStyle = {
     background: 'rgba(255,255,255,0.025)',
@@ -47,7 +46,7 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0f172a',
+      background: '#0a0a0f',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

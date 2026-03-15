@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { User } from '../types/auth';
 
 interface Props {
@@ -11,19 +12,25 @@ function getInitials(name: string): string {
   return name.trim().split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-async function signOut(navigate: (path: string, opts?: { replace?: boolean }) => void): Promise<void> {
+async function signOut(
+  navigate: ReturnType<typeof useNavigate>,
+  clearAuth: () => void,
+): Promise<void> {
   try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
   } finally {
+    clearAuth();
     navigate('/login', { replace: true });
   }
 }
 
 export function UserProfile({ user }: Props): React.ReactElement {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [signOutHovered, setSignOutHovered] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click or Escape
@@ -154,7 +161,11 @@ export function UserProfile({ user }: Props): React.ReactElement {
           <button
             type="button"
             role="menuitem"
-            onClick={() => { void signOut(navigate); }}
+            disabled={isSigningOut}
+            onClick={() => {
+              setIsSigningOut(true);
+              void signOut(navigate, () => queryClient.removeQueries({ queryKey: ['auth', 'me'] }));
+            }}
             onMouseEnter={() => setSignOutHovered(true)}
             onMouseLeave={() => setSignOutHovered(false)}
             style={{
@@ -162,14 +173,15 @@ export function UserProfile({ user }: Props): React.ReactElement {
               textAlign: 'left',
               padding: '10px 16px',
               fontSize: 13,
-              color: signOutHovered ? '#e2e2e8' : '#9ca3af',
-              background: signOutHovered ? 'rgba(255,255,255,0.04)' : 'none',
+              color: isSigningOut ? '#6b7280' : signOutHovered ? '#e2e2e8' : '#9ca3af',
+              background: (!isSigningOut && signOutHovered) ? 'rgba(255,255,255,0.04)' : 'none',
               border: 'none',
-              cursor: 'pointer',
+              cursor: isSigningOut ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               transition: 'color 0.15s, background 0.15s',
+              opacity: isSigningOut ? 0.6 : 1,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -177,7 +189,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            Sign out
+            {isSigningOut ? 'Signing out…' : 'Sign out'}
           </button>
         </div>
       )}
