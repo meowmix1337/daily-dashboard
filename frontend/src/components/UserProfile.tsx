@@ -58,7 +58,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
     width: 36,
     height: 36,
     borderRadius: '50%',
-    border: '1px solid rgba(255,255,255,0.12)',
+    border: '1px solid var(--border-medium)',
     cursor: 'pointer',
     background: 'rgba(99,102,241,0.25)',
     display: 'flex',
@@ -77,8 +77,8 @@ export function UserProfile({ user }: Props): React.ReactElement {
     top: 'calc(100% + 10px)',
     right: 0,
     width: 220,
-    background: 'rgba(15,15,25,0.95)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: 16,
     backdropFilter: 'blur(20px)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
@@ -118,7 +118,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
             alignItems: 'center',
             gap: 12,
             padding: '14px 16px',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            borderBottom: '1px solid var(--border-subtle)',
           }}>
             <div style={{ ...avatarStyle, cursor: 'default', flexShrink: 0 }}>
               {showImg ? (
@@ -137,7 +137,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
               <div style={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#e2e2e8',
+                color: 'var(--text-primary)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -146,7 +146,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
               </div>
               <div style={{
                 fontSize: 11,
-                color: '#6b7280',
+                color: 'var(--text-secondary)',
                 marginTop: 2,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -173,8 +173,8 @@ export function UserProfile({ user }: Props): React.ReactElement {
               textAlign: 'left',
               padding: '10px 16px',
               fontSize: 13,
-              color: isSigningOut ? '#6b7280' : signOutHovered ? '#e2e2e8' : '#9ca3af',
-              background: (!isSigningOut && signOutHovered) ? 'rgba(255,255,255,0.04)' : 'none',
+              color: isSigningOut ? 'var(--text-muted)' : signOutHovered ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: (!isSigningOut && signOutHovered) ? 'var(--bg-elevated)' : 'none',
               border: 'none',
               cursor: isSigningOut ? 'not-allowed' : 'pointer',
               display: 'flex',

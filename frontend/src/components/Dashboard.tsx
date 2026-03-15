@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDashboard } from '../hooks/useDashboard';
 import { useClock } from '../hooks/useClock';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { WeatherCard } from './WeatherCard';
 import { CalendarCard } from './CalendarCard';
 import { TasksCard } from './TasksCard';
@@ -43,7 +44,7 @@ function Skeleton({ width = '100%', height = 16 }: { width?: string | number; he
       width,
       height,
       borderRadius: 4,
-      background: 'rgba(255,255,255,0.07)',
+      background: 'var(--bg-skeleton)',
       animation: 'pulse 1.5s ease-in-out infinite',
     }} />
   );
@@ -54,8 +55,8 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
   return (
     <div style={{
       gridColumn: `span ${span}`,
-      background: 'rgba(255,255,255,0.025)',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--bg-card-border)',
       borderRadius: 16,
       padding: 24,
     }}>
@@ -72,8 +73,10 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
 export default function Dashboard(): React.ReactElement {
   const { data, isLoading, isError, refetch } = useDashboard();
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const now = useClock();
   const [headerLoaded, setHeaderLoaded] = useState(false);
+  const [toggleHovered, setToggleHovered] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setHeaderLoaded(true), 100);
@@ -85,8 +88,8 @@ export default function Dashboard(): React.ReactElement {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0a0a0f',
-      color: '#e2e2e8',
+      background: 'var(--bg-primary)',
+      color: 'var(--text-primary)',
       fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
       padding: 32,
       position: 'relative',
@@ -98,9 +101,9 @@ export default function Dashboard(): React.ReactElement {
         pointerEvents: 'none',
         zIndex: 0,
         background: `
-          radial-gradient(ellipse 600px 400px at 15% 20%, rgba(99,102,241,0.07) 0%, transparent 70%),
-          radial-gradient(ellipse 500px 500px at 85% 70%, rgba(236,72,153,0.05) 0%, transparent 70%),
-          radial-gradient(ellipse 400px 300px at 50% 90%, rgba(16,185,129,0.04) 0%, transparent 70%)
+          radial-gradient(ellipse 600px 400px at 15% 20%, var(--ambient-indigo) 0%, transparent 70%),
+          radial-gradient(ellipse 500px 500px at 85% 70%, var(--ambient-pink) 0%, transparent 70%),
+          radial-gradient(ellipse 400px 300px at 50% 90%, var(--ambient-green) 0%, transparent 70%)
         `,
       }} />
 
@@ -121,7 +124,7 @@ export default function Dashboard(): React.ReactElement {
           justifyContent: 'space-between',
           alignItems: 'flex-end',
           marginBottom: 40,
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--header-border)',
           paddingBottom: 24,
           position: 'relative',
           zIndex: 10,
@@ -130,7 +133,7 @@ export default function Dashboard(): React.ReactElement {
             <div style={{
               fontSize: 14,
               fontWeight: 500,
-              color: '#6366f1',
+              color: 'var(--text-accent)',
               letterSpacing: '0.12em',
               textTransform: 'uppercase',
               marginBottom: 8,
@@ -142,7 +145,7 @@ export default function Dashboard(): React.ReactElement {
               fontSize: 42,
               fontWeight: 700,
               margin: 0,
-              background: 'linear-gradient(135deg, #e2e2e8 0%, #9ca3af 100%)',
+              background: 'linear-gradient(135deg, var(--gradient-heading-start) 0%, var(--gradient-heading-end) 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>
@@ -155,17 +158,41 @@ export default function Dashboard(): React.ReactElement {
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 32,
                 fontWeight: 500,
-                color: '#f0f0f5',
+                color: 'var(--text-clock)',
                 letterSpacing: '-0.02em',
               }}>
                 {formatTime(now)}
               </div>
-              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
                 {data?.meta?.sunrise
                   ? `☀️ ${data.meta.sunrise} → 🌙 ${data.meta.sunset} · ${data.meta.daylight} daylight`
                   : '☀️ — → 🌙 — · — daylight'}
               </div>
             </div>
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onMouseEnter={() => setToggleHovered(true)}
+              onMouseLeave={() => setToggleHovered(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: toggleHovered ? 'var(--toggle-hover-bg)' : 'var(--toggle-bg)',
+                border: '1px solid var(--toggle-border)',
+                color: 'var(--toggle-text)',
+                cursor: 'pointer',
+                fontSize: 16,
+                flexShrink: 0,
+                transition: 'background 0.2s ease',
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             {user && <UserProfile user={user} />}
           </div>
         </div>
@@ -176,22 +203,22 @@ export default function Dashboard(): React.ReactElement {
             marginBottom: 20,
             padding: '12px 16px',
             borderRadius: 10,
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.2)',
+            background: 'var(--error-bg)',
+            border: '1px solid var(--error-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}>
-            <span style={{ fontSize: 14, color: '#ef4444' }}>
+            <span style={{ fontSize: 14, color: 'var(--error-text)' }}>
               Failed to load dashboard data
             </span>
             <button
               onClick={() => refetch()}
               style={{
                 fontSize: 13,
-                color: '#ef4444',
-                background: 'rgba(239,68,68,0.15)',
-                border: '1px solid rgba(239,68,68,0.3)',
+                color: 'var(--error-text)',
+                background: 'var(--error-button-bg)',
+                border: '1px solid var(--error-button-border)',
                 borderRadius: 6,
                 padding: '4px 12px',
                 cursor: 'pointer',
@@ -253,16 +280,16 @@ export default function Dashboard(): React.ReactElement {
         <div style={{
           marginTop: 32,
           paddingTop: 20,
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--footer-border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           opacity: 0.5,
         }}>
-          <div style={{ fontSize: 12, color: '#4b5563' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Daily Dashboard · Powered by Open-Meteo, GNews, Finnhub, Google APIs
           </div>
-          <div style={{ fontSize: 12, color: '#4b5563' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Last updated: {lastUpdated}
           </div>
         </div>
