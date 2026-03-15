@@ -64,8 +64,8 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      background: 'rgba(255,255,255,0.025)',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--bg-card-border)',
       borderRadius: 12,
       backdropFilter: 'blur(20px)',
       marginBottom: 20,
@@ -82,21 +82,21 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
         alignItems: 'center',
         gap: 7,
         padding: '11px 16px',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        borderRight: '1px solid var(--border-subtle)',
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 13, color: '#6366f1', opacity: 0.8 }}>◧</span>
+        <span style={{ fontSize: 13, color: 'var(--text-accent)', opacity: 0.8 }}>◧</span>
         <span style={{
           fontSize: 11,
           fontWeight: 600,
-          color: '#9ca3af',
+          color: 'var(--text-secondary)',
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
         }}>
           Markets
         </span>
         {isFetching && (
-          <span style={{ fontSize: 9, color: '#6366f1', fontFamily: "'JetBrains Mono', monospace" }}>●</span>
+          <span style={{ fontSize: 9, color: 'var(--text-accent)', fontFamily: "'JetBrains Mono', monospace" }}>●</span>
         )}
       </div>
 
@@ -109,7 +109,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
         scrollbarWidth: 'none',
       }}>
         {stocks.length === 0 ? (
-          <span style={{ fontSize: 12, color: '#4b5563', padding: '0 16px', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', padding: '0 16px', whiteSpace: 'nowrap' }}>
             No tickers — add one →
           </span>
         ) : stocks.map((stock, i) => {
@@ -119,7 +119,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
           return (
             <React.Fragment key={stock.symbol}>
               {i > 0 && (
-                <span style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+                <span style={{ width: 1, height: 18, background: 'var(--border-subtle)', flexShrink: 0 }} />
               )}
               <a
                 href={yahooFinanceUrl(stock.symbol)}
@@ -133,7 +133,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                   gap: 8,
                   padding: '11px 14px',
                   textDecoration: 'none',
-                  background: isHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+                  background: isHovered ? 'var(--bg-elevated)' : 'transparent',
                   transition: 'background 0.15s',
                   flexShrink: 0,
                   cursor: 'pointer',
@@ -143,7 +143,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: '#9ca3af',
+                  color: 'var(--text-secondary)',
                 }}>
                   {stock.symbol}
                 </span>
@@ -151,7 +151,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 12,
                   fontWeight: 600,
-                  color: '#f0f0f5',
+                  color: 'var(--text-clock)',
                 }}>
                   {formatStockPrice(stock.price, stock.symbol)}
                 </span>
@@ -173,7 +173,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                     cursor: 'pointer',
                     fontSize: 13,
                     lineHeight: 1,
-                    color: '#6b7280',
+                    color: 'var(--text-secondary)',
                     opacity: isHovered ? 0.7 : 0,
                     transition: 'opacity 0.15s',
                     flexShrink: 0,
@@ -191,7 +191,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
       <div
         ref={addContainerRef}
         style={{
-          borderLeft: '1px solid rgba(255,255,255,0.06)',
+          borderLeft: '1px solid var(--border-subtle)',
           flexShrink: 0,
           position: 'relative',
         }}
@@ -208,7 +208,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
               border: 'none',
               cursor: 'pointer',
               fontSize: 12,
-              color: '#6b7280',
+              color: 'var(--text-secondary)',
               whiteSpace: 'nowrap',
             }}
           >
@@ -221,6 +221,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              maxLength={50}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   setShowAddForm(false);
@@ -230,18 +231,18 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
               placeholder="Symbol or company…"
               style={{
                 width: 190,
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border-medium)',
                 borderRadius: 6,
                 padding: '5px 10px',
                 fontSize: 12,
-                color: '#d1d5db',
+                color: 'var(--text-primary)',
                 outline: 'none',
-                caretColor: '#6366f1',
+                caretColor: 'var(--text-accent)',
               }}
             />
             {isSearching && (
-              <span style={{ fontSize: 11, color: '#6b7280', userSelect: 'none' }}>…</span>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)', userSelect: 'none' }}>…</span>
             )}
           </div>
         )}
@@ -255,8 +256,8 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
               top: 'calc(100% + 4px)',
               right: 0,
               width: 320,
-              background: '#16161f',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-medium)',
               borderRadius: 10,
               zIndex: 50,
               maxHeight: 280,
@@ -273,7 +274,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '9px 12px',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    borderBottom: '1px solid var(--border-subtle)',
                     gap: 8,
                   }}
                 >
@@ -282,14 +283,14 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: 13,
                       fontWeight: 600,
-                      color: '#e2e2e8',
+                      color: 'var(--text-primary)',
                       marginRight: 8,
                     }}>
                       {r.symbol}
                     </span>
                     <span style={{
                       fontSize: 12,
-                      color: '#6b7280',
+                      color: 'var(--text-secondary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -320,7 +321,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                         borderRadius: 6,
                         padding: '3px 10px',
                         fontSize: 12,
-                        color: '#6366f1',
+                        color: 'var(--text-accent)',
                         cursor: add.isPending ? 'not-allowed' : 'pointer',
                         opacity: add.isPending ? 0.6 : 1,
                       }}
