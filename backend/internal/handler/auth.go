@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/daily-dashboard/backend/internal/service"
@@ -83,10 +85,21 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only store the avatar URL if it's a valid https://lh3.googleusercontent.com URL.
+	avatarURL := ""
+	if googleUser.Picture != "" {
+		if u, err := url.Parse(googleUser.Picture); err == nil &&
+			u.Scheme == "https" &&
+			strings.HasSuffix(u.Hostname(), "googleusercontent.com") {
+			avatarURL = googleUser.Picture
+		}
+	}
+
 	encoded, err := session.Encode(h.sessionKey, session.Data{
 		UserID:    userID,
 		Email:     googleUser.Email,
 		Name:      googleUser.Name,
+		AvatarURL: avatarURL,
 		ExpiresAt: time.Now().Add(7 * 24 * time.Hour).Unix(),
 	})
 	if err != nil {
