@@ -25,6 +25,16 @@ func newTasksRouter() (chi.Router, *service.TasksService) {
 func TestTasksHandler_List(t *testing.T) {
 	r, _ := newTasksRouter()
 
+	// Create a task first so the assertion doesn't depend on seed data.
+	createBody := `{"text":"list-test task"}`
+	createReq := httptest.NewRequest(http.MethodPost, "/api/tasks", bytes.NewBufferString(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createW := httptest.NewRecorder()
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("setup: create returned %d, want %d", createW.Code, http.StatusCreated)
+	}
+
 	req := httptest.NewRequest(http.MethodGet, "/api/tasks", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -37,7 +47,7 @@ func TestTasksHandler_List(t *testing.T) {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 	if len(tasks) == 0 {
-		t.Error("expected at least one task in the default list")
+		t.Error("expected at least one task after creating one")
 	}
 }
 

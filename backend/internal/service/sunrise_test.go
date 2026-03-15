@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 )
@@ -70,8 +71,15 @@ func TestSunriseService_FetchFromAPI(t *testing.T) {
 	if set == "" {
 		t.Error("expected non-empty sunset")
 	}
-	if daylight == "" {
-		t.Error("expected non-empty daylight")
+	// Daylight is timezone-independent: sunset(02:00 UTC next day) - sunrise(13:00 UTC) = 13h exactly.
+	if daylight != "13h 0m" {
+		t.Errorf("got daylight %q, want %q", daylight, "13h 0m")
+	}
+	// Times should be formatted as "h:mm AM/PM" (time.Local applied, format "3:04 PM").
+	for _, s := range []string{rise, set} {
+		if !strings.HasSuffix(s, "AM") && !strings.HasSuffix(s, "PM") {
+			t.Errorf("time %q does not end in AM or PM — unexpected format", s)
+		}
 	}
 }
 

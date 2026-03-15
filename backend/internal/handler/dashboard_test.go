@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -78,7 +79,7 @@ func TestDashboardHandler_Get_ContentType(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	ct := w.Header().Get("Content-Type")
-	if ct != "application/json" {
+	if !strings.HasPrefix(ct, "application/json") {
 		t.Errorf("got Content-Type %q, want application/json", ct)
 	}
 }
@@ -99,10 +100,23 @@ func TestDashboardHandler_Get_ResponseShape(t *testing.T) {
 	if resp.Meta == nil {
 		t.Error("expected meta to be present in dashboard response")
 	}
+	// tasks service is in-memory and never fails — Tasks must be non-nil
+	if resp.Tasks == nil {
+		t.Error("expected tasks to be non-nil (in-memory service always succeeds)")
+	}
+	// external services use a failing HTTP client — these fields should be absent
+	if resp.Weather != nil {
+		t.Error("expected weather to be nil when HTTP service fails")
+	}
+	if resp.Stocks != nil {
+		t.Error("expected stocks to be nil when HTTP service fails")
+	}
 }
 
-// TestDashboardHandler_Get_ContextCancelled ensures that a cancelled context
-// does not cause a 5xx — the handler should still return 200.
+// TestDashboardHandler_Get_ContextCancelled ensures that a pre-cancelled context
+// does not cause a panic or a 5xx response. The handler returns 200 because
+// all services use graceful error handling — this test specifically confirms no
+// runtime crash occurs when the request context is already done on entry.
 func TestDashboardHandler_Get_ContextCancelled(t *testing.T) {
 	r := newDashboardRouter(t)
 

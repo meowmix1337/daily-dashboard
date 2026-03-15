@@ -51,9 +51,9 @@ func TestWeatherService_FetchFromAPI(t *testing.T) {
 	forecast.Current.WindSpeed10m = 10.0
 	forecast.Daily.Temperature2mMax = []float64{75.0}
 	forecast.Daily.Temperature2mMin = []float64{55.0}
-	// Add hourly data with a future time
-	future := time.Now().Add(time.Hour).Format("2006-01-02T15:04")
-	forecast.Hourly.Time = []string{future}
+	// Use a fixed far-future timestamp so the hourly slot is never filtered out
+	// regardless of when the test runs (avoids flakiness at minute boundaries).
+	forecast.Hourly.Time = []string{"2099-01-01T00:00"}
 	forecast.Hourly.Temperature2m = []float64{70.0}
 	forecast.Hourly.WeatherCode = []int{0}
 	forecast.Hourly.UVIndex = []float64{3.0}
