@@ -54,7 +54,9 @@ func (s *XxxService) Fetch(ctx context.Context) (model.XxxData, error)
 ```
 Each `Fetch` checks the cache first, calls the external API on miss, and returns an error (card shows unavailable state) if the API key is absent or the call fails. Cache TTLs: weather 15m, stocks 10s, news 3h, calendar 15m, sunrise 6h, quotes 24h.
 
-**Adding a new widget**: create `internal/service/foo.go` → `internal/handler/foo.go` → register route in `server.go` → add field to `model.DashboardResponse` → add goroutine in `handler/dashboard.go`.
+**Handler pattern**: Every handler exposes `AddRoutes(r chi.Router)` which registers its own routes. `setupRoutes()` in `server.go` constructs handlers and calls each one's `AddRoutes` on either the public router or the `requireAuth` protected group — no route paths live in `server.go` itself.
+
+**Adding a new widget**: create `internal/service/foo.go` → `internal/handler/foo.go` (implement `AddRoutes`) → call `fooH.AddRoutes(r)` in `server.go` → add field to `model.DashboardResponse` → add goroutine in `handler/dashboard.go`.
 
 ### Frontend Structure
 
