@@ -78,7 +78,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
   } satisfies React.CSSProperties;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block', zIndex: 200 }}>
       <button
         type="button"
         aria-label="User profile"
