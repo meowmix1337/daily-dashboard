@@ -18,6 +18,14 @@ func NewStocksHandler(svc *service.StocksService) *StocksHandler {
 	return &StocksHandler{service: svc}
 }
 
+func (h *StocksHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/stocks", h.Get)
+	r.Get("/api/stocks/watchlist", h.GetWatchlist)
+	r.Post("/api/stocks/watchlist", h.AddSymbol)
+	r.Delete("/api/stocks/watchlist/{symbol}", h.RemoveSymbol)
+	r.Get("/api/stocks/search", h.SearchSymbols)
+}
+
 // Get returns quotes for the current watchlist.
 func (h *StocksHandler) Get(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.Fetch(r.Context())
