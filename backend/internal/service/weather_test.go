@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -60,10 +61,9 @@ func TestWeatherService_FetchFromAPI(t *testing.T) {
 	aqiResp := openMeteoAQI{}
 	aqiResp.Current.USAQI = 42
 
-	callCount := 0
+	var callCount atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		if callCount == 1 {
+		if callCount.Add(1) == 1 {
 			json.NewEncoder(w).Encode(forecast)
 		} else {
 			json.NewEncoder(w).Encode(aqiResp)
@@ -93,6 +93,12 @@ func TestWeatherService_FetchFromAPI(t *testing.T) {
 	}
 	if got.AQILabel != "Good" {
 		t.Errorf("got AQI label %q, want Good", got.AQILabel)
+	}
+	if len(got.Hourly) == 0 {
+		t.Error("expected at least one hourly forecast entry")
+	}
+	if got.UVIndex != 3.0 {
+		t.Errorf("got UV index %v, want 3.0", got.UVIndex)
 	}
 }
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -81,7 +82,7 @@ func TestTasksHandler_Update(t *testing.T) {
 	r, svc := newTasksRouter()
 
 	// Get an existing task ID
-	tasks, _ := svc.List(nil)
+	tasks, _ := svc.List(context.Background())
 	id := tasks[0].ID
 
 	body := `{"done":true}`
@@ -119,7 +120,7 @@ func TestTasksHandler_Update_NotFound(t *testing.T) {
 func TestTasksHandler_Delete(t *testing.T) {
 	r, svc := newTasksRouter()
 
-	tasks, _ := svc.List(nil)
+	tasks, _ := svc.List(context.Background())
 	id := tasks[0].ID
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/tasks/"+id, nil)
