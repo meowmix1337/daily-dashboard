@@ -90,7 +90,6 @@ export default function Dashboard(): React.ReactElement {
       fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
       padding: 32,
       position: 'relative',
-      overflow: 'hidden',
     }}>
       {/* Ambient background gradients */}
       <div style={{
