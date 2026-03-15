@@ -1,3 +1,4 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Dashboard from './components/Dashboard';
 import { LoginPage } from './pages/LoginPage';
@@ -14,17 +15,22 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const isLoginPage = window.location.pathname === '/login';
-
   return (
     <QueryClientProvider client={queryClient}>
-      {isLoginPage ? (
-        <LoginPage />
-      ) : (
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      )}
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

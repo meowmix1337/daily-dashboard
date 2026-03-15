@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../types/auth';
 
 interface Props {
@@ -10,15 +11,16 @@ function getInitials(name: string): string {
   return name.trim().split(' ').filter(Boolean).map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-async function signOut(): Promise<void> {
+async function signOut(navigate: (path: string, opts?: { replace?: boolean }) => void): Promise<void> {
   try {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
   } finally {
-    window.location.href = '/login';
+    navigate('/login', { replace: true });
   }
 }
 
 export function UserProfile({ user }: Props): React.ReactElement {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [signOutHovered, setSignOutHovered] = useState(false);
@@ -152,7 +154,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
           <button
             type="button"
             role="menuitem"
-            onClick={() => { void signOut(); }}
+            onClick={() => { void signOut(navigate); }}
             onMouseEnter={() => setSignOutHovered(true)}
             onMouseLeave={() => setSignOutHovered(false)}
             style={{

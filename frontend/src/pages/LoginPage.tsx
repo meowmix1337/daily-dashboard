@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export function LoginPage() {
   const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
 
-  // All navigation uses full-reload (no react-router); window.location.href is the app convention.
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      window.location.href = '/';
+      navigate('/', { replace: true });
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, navigate]);
 
   const cardStyle = {
     background: 'rgba(255,255,255,0.025)',
