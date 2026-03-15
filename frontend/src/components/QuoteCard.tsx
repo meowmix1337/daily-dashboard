@@ -22,14 +22,14 @@ export function QuoteCard({ data, delay = 0 }: QuoteCardProps): React.ReactEleme
           fontSize: 20,
           fontStyle: 'italic',
           lineHeight: 1.6,
-          color: '#d1d5db',
+          color: 'var(--text-primary)',
           marginBottom: 16,
         }}>
           "{data.text}"
         </div>
         <div style={{
           fontSize: 13,
-          color: '#6b7280',
+          color: 'var(--text-secondary)',
           fontWeight: 500,
         }}>
           — {data.author}

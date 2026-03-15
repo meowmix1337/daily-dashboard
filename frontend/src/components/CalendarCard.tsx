@@ -47,7 +47,7 @@ export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.Re
                 gap: 12,
                 padding: '10px 12px',
                 borderRadius: 10,
-                background: isNext ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
+                background: isNext ? 'rgba(99,102,241,0.1)' : 'var(--bg-card)',
                 border: isNext
                   ? '1px solid rgba(99,102,241,0.2)'
                   : '1px solid transparent',
@@ -66,14 +66,14 @@ export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.Re
                 <div style={{
                   fontSize: 14,
                   fontWeight: 500,
-                  color: '#e2e2e8',
+                  color: 'var(--text-primary)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                 }}>
                   {event.title}
                 </div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                   {formatEventTime(event.time)} · {event.duration}
                 </div>
               </div>
@@ -81,7 +81,7 @@ export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.Re
                 <div style={{
                   fontSize: 10,
                   fontWeight: 600,
-                  color: '#6366f1',
+                  color: 'var(--text-accent)',
                   background: 'rgba(99,102,241,0.15)',
                   padding: '3px 8px',
                   borderRadius: 20,
