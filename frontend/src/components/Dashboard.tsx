@@ -123,6 +123,8 @@ export default function Dashboard(): React.ReactElement {
           marginBottom: 40,
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           paddingBottom: 24,
+          position: 'relative',
+          zIndex: 10,
         }}>
           <div>
             <div style={{
