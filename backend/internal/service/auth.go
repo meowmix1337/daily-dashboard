@@ -96,7 +96,7 @@ func (s *AuthService) UpsertUser(ctx context.Context, gu GoogleUser) (string, er
 	err = s.db.QueryRowContext(ctx, `
 		INSERT INTO users (id, google_id, email, name, avatar_url)
 		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT (google_id) WHERE deleted_at IS NULL
+		ON CONFLICT (google_id) WHERE deleted_at IS NULL AND google_id IS NOT NULL
 		DO UPDATE SET name = excluded.name, avatar_url = excluded.avatar_url
 		RETURNING id`,
 		id, gu.Sub, email, gu.Name, gu.Picture,
