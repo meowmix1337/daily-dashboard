@@ -30,6 +30,8 @@
   --toggle-border: rgba(255,255,255,0.12);
   --toggle-text: #9ca3af;
   --toggle-hover-bg: rgba(255,255,255,0.12);
+  --bg-dropdown: #16161f;
+  --avatar-text: #c7d2fe;
   --error-bg: rgba(239,68,68,0.1);
   --error-border: rgba(239,68,68,0.2);
   --error-text: #ef4444;
@@ -63,6 +65,8 @@
   --toggle-border: rgba(0,0,0,0.12);
   --toggle-text: #4b5563;
   --toggle-hover-bg: rgba(0,0,0,0.1);
+  --bg-dropdown: #ffffff;
+  --avatar-text: #3730a3;
   --error-bg: rgba(239,68,68,0.08);
   --error-border: rgba(239,68,68,0.18);
   --error-text: #dc2626;
@@ -81,6 +85,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 ::-webkit-scrollbar {

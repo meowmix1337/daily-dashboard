@@ -66,7 +66,7 @@ export function UserProfile({ user }: Props): React.ReactElement {
     justifyContent: 'center',
     fontSize: 13,
     fontWeight: 600,
-    color: '#c7d2fe',
+    color: 'var(--avatar-text)',
     overflow: 'hidden',
     flexShrink: 0,
     outline: 'none',

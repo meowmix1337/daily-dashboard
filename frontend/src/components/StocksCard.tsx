@@ -256,7 +256,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
               top: 'calc(100% + 4px)',
               right: 0,
               width: 320,
-              background: 'var(--bg-primary)',
+              background: 'var(--bg-dropdown)',
               border: '1px solid var(--border-medium)',
               borderRadius: 10,
               zIndex: 50,

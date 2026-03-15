@@ -34,6 +34,7 @@ export function NewsCard({ delay = 0 }: NewsCardProps): React.ReactElement {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <CardHeader icon="⊞" title="Headlines" />
         <button
+          type="button"
           onClick={() => refetch()}
           disabled={isFetching}
           style={{
@@ -96,7 +97,7 @@ export function NewsCard({ delay = 0 }: NewsCardProps): React.ReactElement {
                     borderRadius: 20,
                     border: isActive ? '1px solid rgba(99,102,241,0.4)' : '1px solid var(--border-subtle)',
                     background: isActive ? 'rgba(99,102,241,0.2)' : 'var(--bg-card)',
-                    color: isActive ? '#818cf8' : 'var(--text-secondary)',
+                    color: isActive ? 'var(--text-accent)' : 'var(--text-secondary)',
                     fontSize: 12,
                     fontWeight: isActive ? 600 : 400,
                     cursor: 'pointer',

@@ -8,6 +8,9 @@ function getInitialTheme(): Theme {
     const stored = localStorage.getItem('dashboard-theme');
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {}
+  try {
+    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+  } catch {}
   return 'dark';
 }
 

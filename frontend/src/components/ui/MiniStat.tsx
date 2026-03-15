@@ -12,7 +12,7 @@ export function MiniStat({ label, value, accent }: MiniStatProps): React.ReactEl
       flex: 1,
       textAlign: 'center',
       padding: '8px 4px',
-      background: 'var(--bg-card)',
+      background: 'var(--bg-elevated)',
       borderRadius: 8,
     }}>
       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>{label}</div>

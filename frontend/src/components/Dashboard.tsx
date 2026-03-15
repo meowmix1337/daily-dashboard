@@ -170,6 +170,7 @@ export default function Dashboard(): React.ReactElement {
               </div>
             </div>
             <button
+              type="button"
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -213,6 +214,7 @@ export default function Dashboard(): React.ReactElement {
               Failed to load dashboard data
             </span>
             <button
+              type="button"
               onClick={() => refetch()}
               style={{
                 fontSize: 13,
