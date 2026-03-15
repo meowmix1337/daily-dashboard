@@ -160,6 +160,13 @@ export default function Dashboard(): React.ReactElement {
                 ? `☀️ ${data.meta.sunrise} → 🌙 ${data.meta.sunset} · ${data.meta.daylight} daylight`
                 : '☀️ — → 🌙 — · — daylight'}
             </div>
+            <button
+              type="button"
+              onClick={() => { fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => { window.location.href = '/login'; }); }}
+              style={{ marginTop: 8, fontSize: 12, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+            >
+              Sign out
+            </button>
           </div>
         </div>
 

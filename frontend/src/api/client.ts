@@ -3,9 +3,11 @@ import type { DashboardResponse, NewsCategory, Task, StockQuote, SymbolSearchRes
 const BASE = '/api';
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const { headers: extraHeaders, ...rest } = options ?? {};
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(extraHeaders as Record<string, string>) },
+    ...rest,
   });
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${res.statusText}`);
@@ -56,12 +58,6 @@ export function searchSymbols(query: string): Promise<{ results: SymbolSearchRes
   return apiFetch<{ results: SymbolSearchResult[] }>(`/stocks/search?q=${encodeURIComponent(query)}`);
 }
 
-export async function deleteTask(id: string): Promise<void> {
-  const res = await fetch(`${BASE}/tasks/${id}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${res.statusText}`);
-  }
+export function deleteTask(id: string): Promise<void> {
+  return apiFetch(`/tasks/${id}`, { method: 'DELETE' }).then(() => undefined);
 }
