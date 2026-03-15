@@ -57,7 +57,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
               borderRadius: 10,
               background: task.done
                 ? 'rgba(16,185,129,0.05)'
-                : 'rgba(255,255,255,0.02)',
+                : 'var(--bg-card)',
               transition: 'all 0.2s',
             }}
           >
@@ -69,7 +69,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
                 height: 20,
                 borderRadius: 6,
                 flexShrink: 0,
-                border: task.done ? '2px solid #10b981' : '2px solid #374151',
+                border: task.done ? '2px solid #10b981' : '2px solid var(--border-medium)',
                 background: task.done ? '#10b981' : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
@@ -77,7 +77,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 fontSize: 12,
-                color: '#0a0a0f',
+                color: 'var(--bg-primary)',
               }}
             >
               {task.done && '✓'}
@@ -89,7 +89,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
               style={{
                 flex: 1,
                 fontSize: 13,
-                color: task.done ? '#6b7280' : '#d1d5db',
+                color: task.done ? 'var(--text-muted)' : 'var(--text-primary)',
                 textDecoration: task.done ? 'line-through' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -104,7 +104,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
               height: 7,
               borderRadius: '50%',
               flexShrink: 0,
-              background: PRIORITY_COLOR[task.priority] ?? '#6b7280',
+              background: PRIORITY_COLOR[task.priority] ?? 'var(--text-secondary)',
               opacity: task.done ? 0.3 : 1,
             }} />
 
@@ -118,7 +118,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
                 cursor: 'pointer',
                 fontSize: 14,
                 lineHeight: 1,
-                color: '#6b7280',
+                color: 'var(--text-secondary)',
                 opacity: hoveredId === task.id ? 0.7 : 0,
                 transition: 'opacity 0.15s',
                 flexShrink: 0,
@@ -135,7 +135,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
       <div style={{
         marginTop: 12,
         paddingTop: 12,
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         gap: 8,
@@ -169,8 +169,8 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
             border: 'none',
             outline: 'none',
             fontSize: 13,
-            color: '#d1d5db',
-            caretColor: '#6366f1',
+            color: 'var(--text-primary)',
+            caretColor: 'var(--text-accent)',
           }}
         />
 
@@ -184,7 +184,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
               borderRadius: 6,
               padding: '3px 10px',
               fontSize: 12,
-              color: '#6366f1',
+              color: 'var(--text-accent)',
               cursor: 'pointer',
               flexShrink: 0,
             }}

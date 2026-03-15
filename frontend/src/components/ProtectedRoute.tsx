@@ -14,14 +14,14 @@ export function ProtectedRoute({ children }: Props) {
         role="status"
         aria-label="Loading"
         aria-live="polite"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)' }}
       >
         <div style={{
           width: 32,
           height: 32,
           borderRadius: '50%',
-          border: '3px solid rgba(255,255,255,0.1)',
-          borderTopColor: '#94a3b8',
+          border: '3px solid var(--border-subtle)',
+          borderTopColor: 'var(--text-secondary)',
           animation: 'spin 0.8s linear infinite',
         }} />
       </div>

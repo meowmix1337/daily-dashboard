@@ -19,8 +19,8 @@ export function Card({ children, delay = 0, span = 1, className = '' }: CardProp
     <div
       style={{
         gridColumn: `span ${span}`,
-        background: 'rgba(255,255,255,0.025)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--bg-card-border)',
         borderRadius: 16,
         padding: 24,
         backdropFilter: 'blur(20px)',
