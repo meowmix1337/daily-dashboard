@@ -17,6 +17,13 @@ func NewTasksHandler(svc *service.TasksService) *TasksHandler {
 	return &TasksHandler{service: svc}
 }
 
+func (h *TasksHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/tasks", h.List)
+	r.Post("/api/tasks", h.Create)
+	r.Patch("/api/tasks/{id}", h.Update)
+	r.Delete("/api/tasks/{id}", h.Delete)
+}
+
 func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
 	tasks, err := h.service.List(r.Context())
 	if err != nil {

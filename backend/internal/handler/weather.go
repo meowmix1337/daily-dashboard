@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -13,6 +15,10 @@ type WeatherHandler struct {
 
 func NewWeatherHandler(svc *service.WeatherService) *WeatherHandler {
 	return &WeatherHandler{service: svc}
+}
+
+func (h *WeatherHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/weather", h.Get)
 }
 
 func (h *WeatherHandler) Get(w http.ResponseWriter, r *http.Request) {

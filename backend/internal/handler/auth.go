@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/daily-dashboard/backend/internal/service"
 	"github.com/daily-dashboard/backend/internal/session"
 )
@@ -133,6 +135,13 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// AddRoutes registers the public auth routes (no session required).
+func (h *AuthHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/auth/login", h.Login)
+	r.Get("/api/auth/callback", h.Callback)
+	r.Post("/api/auth/logout", h.Logout)
 }
 
 func randomHex(n int) (string, error) {

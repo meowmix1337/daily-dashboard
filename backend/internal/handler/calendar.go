@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -13,6 +15,10 @@ type CalendarHandler struct {
 
 func NewCalendarHandler(svc *service.CalendarService) *CalendarHandler {
 	return &CalendarHandler{service: svc}
+}
+
+func (h *CalendarHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/calendar", h.Get)
 }
 
 func (h *CalendarHandler) Get(w http.ResponseWriter, r *http.Request) {

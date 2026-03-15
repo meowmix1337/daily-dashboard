@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/daily-dashboard/backend/internal/middleware"
 )
 
@@ -11,6 +13,10 @@ import (
 type MeHandler struct{}
 
 func NewMeHandler() *MeHandler { return &MeHandler{} }
+
+func (h *MeHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/auth/me", h.Get)
+}
 
 func (h *MeHandler) Get(w http.ResponseWriter, r *http.Request) {
 	sess, ok := middleware.SessionFromContext(r.Context())

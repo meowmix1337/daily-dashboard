@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/daily-dashboard/backend/internal/model"
@@ -38,6 +39,10 @@ func NewDashboardHandler(
 		sunrise:  sunrise,
 		quotes:   quotes,
 	}
+}
+
+func (h *DashboardHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/dashboard", h.Get)
 }
 
 // Get fans out to all services concurrently and returns a unified response.

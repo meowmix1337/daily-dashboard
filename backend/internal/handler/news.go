@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -13,6 +15,10 @@ type NewsHandler struct {
 
 func NewNewsHandler(svc *service.NewsService) *NewsHandler {
 	return &NewsHandler{service: svc}
+}
+
+func (h *NewsHandler) AddRoutes(r chi.Router) {
+	r.Get("/api/news", h.Get)
 }
 
 func (h *NewsHandler) Get(w http.ResponseWriter, r *http.Request) {

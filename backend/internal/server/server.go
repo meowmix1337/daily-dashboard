@@ -87,30 +87,19 @@ func (s *Server) setupRoutes() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
-	r.Get("/api/auth/login", authH.Login)
-	r.Get("/api/auth/callback", authH.Callback)
-	r.Post("/api/auth/logout", authH.Logout)
+	authH.AddRoutes(r)
 
 	// Protected routes — valid session cookie required
 	r.Group(func(r chi.Router) {
 		r.Use(requireAuth)
 
-		r.Get("/api/auth/me", meH.Get)
-
-		r.Get("/api/dashboard", dashboardH.Get)
-		r.Get("/api/weather", weatherH.Get)
-		r.Get("/api/news", newsH.Get)
-		r.Get("/api/stocks", stocksH.Get)
-		r.Get("/api/stocks/watchlist", stocksH.GetWatchlist)
-		r.Post("/api/stocks/watchlist", stocksH.AddSymbol)
-		r.Delete("/api/stocks/watchlist/{symbol}", stocksH.RemoveSymbol)
-		r.Get("/api/stocks/search", stocksH.SearchSymbols)
-		r.Get("/api/calendar", calendarH.Get)
-		r.Get("/api/meta", metaH.Get)
-
-		r.Get("/api/tasks", tasksH.List)
-		r.Post("/api/tasks", tasksH.Create)
-		r.Patch("/api/tasks/{id}", tasksH.Update)
-		r.Delete("/api/tasks/{id}", tasksH.Delete)
+		meH.AddRoutes(r)
+		dashboardH.AddRoutes(r)
+		weatherH.AddRoutes(r)
+		newsH.AddRoutes(r)
+		stocksH.AddRoutes(r)
+		calendarH.AddRoutes(r)
+		metaH.AddRoutes(r)
+		tasksH.AddRoutes(r)
 	})
 }
