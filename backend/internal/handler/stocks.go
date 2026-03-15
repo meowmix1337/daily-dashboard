@@ -3,9 +3,12 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httprate"
 
 	"github.com/daily-dashboard/backend/internal/service"
 )
@@ -23,14 +26,15 @@ func (h *StocksHandler) AddRoutes(r chi.Router) {
 	r.Get("/api/stocks/watchlist", h.GetWatchlist)
 	r.Post("/api/stocks/watchlist", h.AddSymbol)
 	r.Delete("/api/stocks/watchlist/{symbol}", h.RemoveSymbol)
-	r.Get("/api/stocks/search", h.SearchSymbols)
+	r.With(httprate.LimitByIP(2, time.Second)).Get("/api/stocks/search", h.SearchSymbols)
 }
 
 // Get returns quotes for the current watchlist.
 func (h *StocksHandler) Get(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.Fetch(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("stocks fetch error", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -58,9 +62,9 @@ func (h *StocksHandler) AddSymbol(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.AddSymbol(body.Symbol); err != nil {
 		if errors.Is(err, service.ErrSymbolExists) {
-			http.Error(w, err.Error(), http.StatusConflict)
+			http.Error(w, "symbol already in watchlist", http.StatusConflict)
 		} else {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "invalid symbol", http.StatusBadRequest)
 		}
 		return
 	}
@@ -77,9 +81,10 @@ func (h *StocksHandler) RemoveSymbol(w http.ResponseWriter, r *http.Request) {
 	sym := chi.URLParam(r, "symbol")
 	if err := h.service.RemoveSymbol(sym); err != nil {
 		if errors.Is(err, service.ErrSymbolNotFound) {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			http.Error(w, "symbol not found", http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			slog.Error("stocks remove error", "error", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -97,10 +102,15 @@ func (h *StocksHandler) SearchSymbols(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing query parameter 'q'", http.StatusBadRequest)
 		return
 	}
+	if len(q) > 50 {
+		http.Error(w, "query too long", http.StatusBadRequest)
+		return
+	}
 
 	results, err := h.service.SearchSymbols(r.Context(), q)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("stocks search error", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 

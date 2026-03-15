@@ -112,13 +112,14 @@ func (s *StocksService) SearchSymbols(ctx context.Context, query string) ([]mode
 		return nil, fmt.Errorf("FINNHUB_API_KEY not configured")
 	}
 
-	u := fmt.Sprintf("https://finnhub.io/api/v1/search?q=%s&token=%s",
-		url.QueryEscape(query), s.apiKey)
+	u := fmt.Sprintf("https://finnhub.io/api/v1/search?q=%s",
+		url.QueryEscape(query))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("X-Finnhub-Token", s.apiKey)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -126,7 +127,7 @@ func (s *StocksService) SearchSymbols(ctx context.Context, query string) ([]mode
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB max
 	if err != nil {
 		return nil, err
 	}
@@ -196,12 +197,13 @@ func (s *StocksService) fetchFromAPIs(ctx context.Context) ([]model.StockQuote, 
 }
 
 func (s *StocksService) fetchFinnhub(ctx context.Context, symbol string) (model.StockQuote, error) {
-	u := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s&token=%s", symbol, s.apiKey)
+	u := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s", symbol)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return model.StockQuote{}, err
 	}
+	req.Header.Set("X-Finnhub-Token", s.apiKey)
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -209,7 +211,7 @@ func (s *StocksService) fetchFinnhub(ctx context.Context, symbol string) (model.
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB max
 	if err != nil {
 		return model.StockQuote{}, err
 	}
@@ -241,7 +243,7 @@ func (s *StocksService) fetchBTC(ctx context.Context) (model.StockQuote, error) 
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB max
 	if err != nil {
 		return model.StockQuote{}, err
 	}

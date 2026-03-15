@@ -71,6 +71,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
       marginBottom: 20,
       overflow: 'visible',
       position: 'relative',
+      zIndex: showAddForm ? 10 : undefined,
       opacity: loaded ? 1 : 0,
       transform: loaded ? 'translateY(0)' : 'translateY(12px)',
       transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
@@ -278,23 +279,27 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
                     gap: 8,
                   }}
                 >
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: 13,
                       fontWeight: 600,
                       color: 'var(--text-primary)',
-                      marginRight: 8,
+                      flexShrink: 0,
                     }}>
                       {r.symbol}
                     </span>
-                    <span style={{
-                      fontSize: 12,
-                      color: 'var(--text-secondary)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
+                    <span
+                      title={r.description}
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--text-secondary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                      }}
+                    >
                       {r.description}
                     </span>
                   </div>
