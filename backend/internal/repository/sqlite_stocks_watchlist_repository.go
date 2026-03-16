@@ -55,7 +55,7 @@ func (r *SQLiteStocksWatchlistRepository) Add(ctx context.Context, userID string
 	return nil
 }
 
-func (r *SQLiteStocksWatchlistRepository) Remove(ctx context.Context, userID string, symbol string) error {
+func (r *SQLiteStocksWatchlistRepository) Remove(ctx context.Context, userID string, symbol string) (int64, error) {
 	now := time.Now().UTC().Format(timeFormat)
 	result, err := r.db.ExecContext(ctx,
 		`UPDATE stocks_watchlist
@@ -64,14 +64,11 @@ func (r *SQLiteStocksWatchlistRepository) Remove(ctx context.Context, userID str
 		now, now, userID, symbol,
 	)
 	if err != nil {
-		return fmt.Errorf("remove from watchlist: %w", err)
+		return 0, fmt.Errorf("remove from watchlist: %w", err)
 	}
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("remove from watchlist rows affected: %w", err)
+		return 0, fmt.Errorf("remove from watchlist rows affected: %w", err)
 	}
-	if rows == 0 {
-		return ErrSymbolNotFound
-	}
-	return nil
+	return rows, nil
 }

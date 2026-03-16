@@ -13,6 +13,9 @@ import (
 	"github.com/daily-dashboard/backend/internal/repository"
 )
 
+// ErrTaskNotFound is returned when a task does not exist or does not belong to the user.
+var ErrTaskNotFound = errors.New("task not found")
+
 // ErrTaskValidation is returned when task input fails validation.
 var ErrTaskValidation = errors.New("task validation failed")
 
@@ -85,7 +88,7 @@ func (s *TasksService) Update(ctx context.Context, id string, userID string, don
 		return model.Task{}, fmt.Errorf("%w: invalid priority %q", ErrTaskValidation, *priority)
 	}
 
-	row, err := s.repo.Update(ctx, id, userID, repository.TaskUpdate{
+	n, err := s.repo.Update(ctx, id, userID, repository.TaskUpdate{
 		Done:       done,
 		Text:       text,
 		PriorityID: priority,
@@ -93,13 +96,24 @@ func (s *TasksService) Update(ctx context.Context, id string, userID string, don
 	if err != nil {
 		return model.Task{}, fmt.Errorf("update task: %w", err)
 	}
+	if n == 0 {
+		return model.Task{}, ErrTaskNotFound
+	}
+	row, err := s.repo.Get(ctx, id, userID)
+	if err != nil {
+		return model.Task{}, fmt.Errorf("fetch updated task: %w", err)
+	}
 	return rowToModel(row), nil
 }
 
 // Delete soft-deletes a task by ID, scoped to the given user.
 func (s *TasksService) Delete(ctx context.Context, id string, userID string) error {
-	if err := s.repo.Delete(ctx, id, userID); err != nil {
+	n, err := s.repo.Delete(ctx, id, userID)
+	if err != nil {
 		return fmt.Errorf("delete task: %w", err)
+	}
+	if n == 0 {
+		return ErrTaskNotFound
 	}
 	return nil
 }

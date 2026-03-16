@@ -24,5 +24,5 @@ type StocksWatchlistRepository interface {
 	// Add inserts or re-activates a symbol for the given user (UPSERT).
 	Add(ctx context.Context, userID string, symbol string) error
 	// Remove soft-deletes a symbol for the given user.
-	Remove(ctx context.Context, userID string, symbol string) error
+	Remove(ctx context.Context, userID string, symbol string) (int64, error)
 }

@@ -41,6 +41,6 @@ type TaskRepository interface {
 	List(ctx context.Context, userID string) ([]TaskRow, error)
 	Get(ctx context.Context, id string, userID string) (TaskRow, error)
 	Create(ctx context.Context, t TaskCreate) (TaskRow, error)
-	Update(ctx context.Context, id string, userID string, u TaskUpdate) (TaskRow, error)
-	Delete(ctx context.Context, id string, userID string) error
+	Update(ctx context.Context, id string, userID string, u TaskUpdate) (int64, error)
+	Delete(ctx context.Context, id string, userID string) (int64, error)
 }

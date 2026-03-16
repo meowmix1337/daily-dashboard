@@ -89,11 +89,12 @@ func (s *StocksService) AddSymbol(ctx context.Context, userID string, sym string
 // RemoveSymbol removes a symbol from the user's watchlist (soft-delete).
 func (s *StocksService) RemoveSymbol(ctx context.Context, userID string, sym string) error {
 	sym = strings.ToUpper(strings.TrimSpace(sym))
-	if err := s.repo.Remove(ctx, userID, sym); err != nil {
-		if errors.Is(err, repository.ErrSymbolNotFound) {
-			return ErrSymbolNotFound
-		}
-		return err
+	n, err := s.repo.Remove(ctx, userID, sym)
+	if err != nil {
+		return fmt.Errorf("remove symbol: %w", err)
+	}
+	if n == 0 {
+		return ErrSymbolNotFound
 	}
 	s.cache.Delete("stocks:" + userID)
 	return nil

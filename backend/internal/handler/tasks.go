@@ -13,7 +13,6 @@ import (
 
 	"github.com/daily-dashboard/backend/internal/middleware"
 	"github.com/daily-dashboard/backend/internal/model"
-	"github.com/daily-dashboard/backend/internal/repository"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -106,7 +105,7 @@ func (h *TasksHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	task, err := h.service.Update(r.Context(), id, userID, req.Done, req.Text, req.Priority)
 	if err != nil {
-		if errors.Is(err, repository.ErrTaskNotFound) {
+		if errors.Is(err, service.ErrTaskNotFound) {
 			http.Error(w, "task not found", http.StatusNotFound)
 		} else if errors.Is(err, service.ErrTaskValidation) {
 			http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -130,7 +129,7 @@ func (h *TasksHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 	if err := h.service.Delete(r.Context(), id, userID); err != nil {
-		if errors.Is(err, repository.ErrTaskNotFound) {
+		if errors.Is(err, service.ErrTaskNotFound) {
 			http.Error(w, "task not found", http.StatusNotFound)
 		} else {
 			slog.Error("failed to delete task", "error", err, "user_id", userID, "task_id", id)
