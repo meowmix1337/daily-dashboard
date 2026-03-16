@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -24,7 +25,8 @@ func (h *NewsHandler) AddRoutes(r chi.Router) {
 func (h *NewsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	data, err := h.service.Fetch(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("news fetch error", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
