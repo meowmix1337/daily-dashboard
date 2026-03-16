@@ -9,8 +9,8 @@ type CreateTaskRequest struct {
 // UpdateTaskRequest is the JSON body for PATCH /api/tasks/{id}.
 type UpdateTaskRequest struct {
 	Done     *bool   `json:"done,omitempty"`
-	Text     *string `json:"text,omitempty"`
-	Priority *string `json:"priority,omitempty"`
+	Text     *string `json:"text,omitempty"     validate:"omitempty,min=1,max=1000"`
+	Priority *string `json:"priority,omitempty" validate:"omitempty,oneof=high medium low"`
 }
 
 // TaskResponse is the JSON response for a single task.
