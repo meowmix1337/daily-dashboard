@@ -7,12 +7,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-
+	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/daily-dashboard/backend/internal/config"
 	"github.com/daily-dashboard/backend/internal/handler"
 	"github.com/daily-dashboard/backend/internal/middleware"
+	"github.com/daily-dashboard/backend/internal/repository"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -50,13 +51,16 @@ func (s *Server) setupRoutes() {
 	// Shared dependencies
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	cache := service.NewCacheService()
+	validate := validator.New()
 
 	// Services
 	weatherSvc := service.NewWeatherService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	newsSvc := service.NewNewsService(httpClient, s.cfg.GNewsAPIKey, cache)
-	stocksSvc := service.NewStocksService(httpClient, s.cfg.FinnhubAPIKey, cache)
+	watchlistRepo := repository.NewSQLiteStocksWatchlistRepository(s.db)
+	stocksSvc := service.NewStocksService(httpClient, s.cfg.FinnhubAPIKey, cache, watchlistRepo)
 	calendarSvc := service.NewCalendarService(httpClient, s.cfg.ICSCalendarURL, cache, s.cfg.Timezone)
-	tasksSvc := service.NewTasksService()
+	taskRepo := repository.NewSQLiteTaskRepository(s.db)
+	tasksSvc := service.NewTasksService(taskRepo)
 	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	quotesSvc := service.NewQuotesService(httpClient, s.cfg.APINinjasAPIKey, cache)
 
@@ -69,9 +73,9 @@ func (s *Server) setupRoutes() {
 	// Handlers
 	weatherH := handler.NewWeatherHandler(weatherSvc)
 	newsH := handler.NewNewsHandler(newsSvc)
-	stocksH := handler.NewStocksHandler(stocksSvc)
+	stocksH := handler.NewStocksHandler(stocksSvc, validate)
 	calendarH := handler.NewCalendarHandler(calendarSvc)
-	tasksH := handler.NewTasksHandler(tasksSvc)
+	tasksH := handler.NewTasksHandler(tasksSvc, validate)
 	metaH := handler.NewMetaHandler(sunriseSvc, quotesSvc)
 	dashboardH := handler.NewDashboardHandler(
 		weatherSvc,
