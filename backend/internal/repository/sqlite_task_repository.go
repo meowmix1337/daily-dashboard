@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -91,7 +92,7 @@ func (r *SQLiteTaskRepository) Get(ctx context.Context, id string, userID string
 		id, userID,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return TaskRow{}, ErrTaskNotFound
 		}
 		return TaskRow{}, fmt.Errorf("get task: %w", err)

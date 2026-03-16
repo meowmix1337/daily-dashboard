@@ -198,7 +198,7 @@ func (s *StocksService) fetchFromAPIs(ctx context.Context, userID string) ([]mod
 }
 
 func (s *StocksService) fetchFinnhub(ctx context.Context, symbol string) (model.StockQuote, error) {
-	u := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s", symbol)
+	u := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s", url.QueryEscape(symbol))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
