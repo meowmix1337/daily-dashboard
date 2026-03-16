@@ -13,6 +13,7 @@ import (
 	"github.com/daily-dashboard/backend/internal/config"
 	"github.com/daily-dashboard/backend/internal/handler"
 	"github.com/daily-dashboard/backend/internal/middleware"
+	"github.com/daily-dashboard/backend/internal/repository"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -54,9 +55,11 @@ func (s *Server) setupRoutes() {
 	// Services
 	weatherSvc := service.NewWeatherService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	newsSvc := service.NewNewsService(httpClient, s.cfg.GNewsAPIKey, cache)
-	stocksSvc := service.NewStocksService(httpClient, s.cfg.FinnhubAPIKey, cache)
+	watchlistRepo := repository.NewSQLiteStocksWatchlistRepository(s.db)
+	stocksSvc := service.NewStocksService(httpClient, s.cfg.FinnhubAPIKey, cache, watchlistRepo)
 	calendarSvc := service.NewCalendarService(httpClient, s.cfg.ICSCalendarURL, cache, s.cfg.Timezone)
-	tasksSvc := service.NewTasksService()
+	taskRepo := repository.NewSQLiteTaskRepository(s.db)
+	tasksSvc := service.NewTasksService(taskRepo)
 	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	quotesSvc := service.NewQuotesService(httpClient, s.cfg.APINinjasAPIKey, cache)
 

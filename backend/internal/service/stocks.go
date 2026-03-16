@@ -9,44 +9,40 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/daily-dashboard/backend/internal/repository"
 )
 
-// Sentinel errors for watchlist mutations.
-var (
-	ErrSymbolExists   = errors.New("symbol already in watchlist")
-	ErrSymbolNotFound = errors.New("symbol not in watchlist")
-)
+// ErrSymbolNotFound is returned when a watchlist symbol does not exist.
+var ErrSymbolNotFound = errors.New("symbol not in watchlist")
 
 // StocksService fetches stock quotes from Finnhub and crypto from CoinGecko.
 type StocksService struct {
 	httpClient *http.Client
 	apiKey     string
 	cache      *CacheService
-	mu         sync.RWMutex
-	symbols    []string
+	repo       repository.StocksWatchlistRepository
 }
 
-// NewStocksService creates a new StocksService with the default watchlist.
-func NewStocksService(httpClient *http.Client, apiKey string, cache *CacheService) *StocksService {
+// NewStocksService creates a new StocksService backed by a watchlist repository.
+func NewStocksService(httpClient *http.Client, apiKey string, cache *CacheService, repo repository.StocksWatchlistRepository) *StocksService {
 	return &StocksService{
 		httpClient: httpClient,
 		apiKey:     apiKey,
 		cache:      cache,
-		symbols:    []string{"AAPL", "GOOGL", "MSFT", "BTC"},
+		repo:       repo,
 	}
 }
 
 const stocksCacheTTL = 10 * time.Second
 
 // Fetch retrieves stock quotes for the current watchlist.
-func (s *StocksService) Fetch(ctx context.Context) ([]model.StockQuote, error) {
-	const cacheKey = "stocks"
+func (s *StocksService) Fetch(ctx context.Context, userID string) ([]model.StockQuote, error) {
+	cacheKey := "stocks:" + userID
 	if v, ok := s.cache.Get(cacheKey); ok {
 		return v.([]model.StockQuote), nil
 	}
@@ -55,7 +51,7 @@ func (s *StocksService) Fetch(ctx context.Context) ([]model.StockQuote, error) {
 		return nil, fmt.Errorf("FINNHUB_API_KEY not configured")
 	}
 
-	quotes, err := s.fetchFromAPIs(ctx)
+	quotes, err := s.fetchFromAPIs(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -64,46 +60,43 @@ func (s *StocksService) Fetch(ctx context.Context) ([]model.StockQuote, error) {
 	return quotes, nil
 }
 
-// GetSymbols returns a copy of the current watchlist symbols.
-func (s *StocksService) GetSymbols() []string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	out := make([]string, len(s.symbols))
-	copy(out, s.symbols)
-	return out
+// GetSymbols returns the current watchlist symbols for a user.
+func (s *StocksService) GetSymbols(ctx context.Context, userID string) ([]string, error) {
+	rows, err := s.repo.List(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get symbols: %w", err)
+	}
+	symbols := make([]string, len(rows))
+	for i, row := range rows {
+		symbols[i] = row.Symbol
+	}
+	return symbols, nil
 }
 
-// AddSymbol appends a symbol to the watchlist if not already present.
-func (s *StocksService) AddSymbol(sym string) error {
+// AddSymbol adds a symbol to the user's watchlist (UPSERT — re-activates soft-deleted rows).
+func (s *StocksService) AddSymbol(ctx context.Context, userID string, sym string) error {
 	sym = strings.ToUpper(strings.TrimSpace(sym))
 	if sym == "" {
 		return fmt.Errorf("symbol cannot be empty")
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, existing := range s.symbols {
-		if existing == sym {
-			return ErrSymbolExists
-		}
+	if err := s.repo.Add(ctx, userID, sym); err != nil {
+		return err
 	}
-	s.symbols = append(s.symbols, sym)
-	s.cache.Delete("stocks")
+	s.cache.Delete("stocks:" + userID)
 	return nil
 }
 
-// RemoveSymbol removes a symbol from the watchlist.
-func (s *StocksService) RemoveSymbol(sym string) error {
+// RemoveSymbol removes a symbol from the user's watchlist (soft-delete).
+func (s *StocksService) RemoveSymbol(ctx context.Context, userID string, sym string) error {
 	sym = strings.ToUpper(strings.TrimSpace(sym))
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i, existing := range s.symbols {
-		if existing == sym {
-			s.symbols = append(s.symbols[:i], s.symbols[i+1:]...)
-			s.cache.Delete("stocks")
-			return nil
+	if err := s.repo.Remove(ctx, userID, sym); err != nil {
+		if errors.Is(err, repository.ErrSymbolNotFound) {
+			return ErrSymbolNotFound
 		}
+		return err
 	}
-	return ErrSymbolNotFound
+	s.cache.Delete("stocks:" + userID)
+	return nil
 }
 
 // SearchSymbols queries Finnhub for symbols matching the given query string.
@@ -152,16 +145,16 @@ func (s *StocksService) SearchSymbols(ctx context.Context, query string) ([]mode
 	return out, nil
 }
 
-func (s *StocksService) fetchFromAPIs(ctx context.Context) ([]model.StockQuote, error) {
-	s.mu.RLock()
-	syms := make([]string, len(s.symbols))
-	copy(syms, s.symbols)
-	s.mu.RUnlock()
+func (s *StocksService) fetchFromAPIs(ctx context.Context, userID string) ([]model.StockQuote, error) {
+	symbols, err := s.GetSymbols(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
-	results := make([]model.StockQuote, len(syms))
+	results := make([]model.StockQuote, len(symbols))
 	g, gctx := errgroup.WithContext(ctx)
 
-	for i, sym := range syms {
+	for i, sym := range symbols {
 		i, sym := i, sym
 		g.Go(func() error {
 			var q model.StockQuote

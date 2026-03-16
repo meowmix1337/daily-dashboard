@@ -2,76 +2,113 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"sync"
+	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/daily-dashboard/backend/internal/repository"
 )
 
-// TasksService manages an in-memory list of tasks.
+// ErrTaskValidation is returned when task input fails validation.
+var ErrTaskValidation = errors.New("task validation failed")
+
+// TasksService manages tasks via a repository.
 type TasksService struct {
-	mu    sync.Mutex
-	tasks []model.Task
+	repo repository.TaskRepository
 }
 
-// NewTasksService creates a new TasksService with some default tasks.
-func NewTasksService() *TasksService {
-	return &TasksService{
-		tasks: []model.Task{
-			{ID: uuid.NewString(), Text: "Review PR #482 — auth refactor", Done: true, Priority: "high"},
-			{ID: uuid.NewString(), Text: "Update Helm chart values for staging", Done: false, Priority: "high"},
-			{ID: uuid.NewString(), Text: "Write ADR for event sourcing migration", Done: false, Priority: "medium"},
-			{ID: uuid.NewString(), Text: "Fix flaky integration test in CI", Done: false, Priority: "medium"},
-			{ID: uuid.NewString(), Text: "Prepare demo for stakeholder sync", Done: false, Priority: "low"},
-		},
+// NewTasksService creates a new TasksService backed by the given repository.
+func NewTasksService(repo repository.TaskRepository) *TasksService {
+	return &TasksService{repo: repo}
+}
+
+// List returns all tasks for the given user.
+func (s *TasksService) List(ctx context.Context, userID string) ([]model.Task, error) {
+	rows, err := s.repo.List(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list tasks: %w", err)
 	}
-}
-
-// List returns all tasks.
-func (s *TasksService) List(ctx context.Context) ([]model.Task, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	result := make([]model.Task, len(s.tasks))
-	copy(result, s.tasks)
-	return result, nil
-}
-
-// Create adds a new task.
-func (s *TasksService) Create(ctx context.Context, task model.Task) (model.Task, error) {
-	task.ID = uuid.NewString()
-	if task.Priority == "" {
-		task.Priority = "medium"
+	tasks := make([]model.Task, 0, len(rows))
+	for _, r := range rows {
+		tasks = append(tasks, rowToModel(r))
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.tasks = append(s.tasks, task)
-	return task, nil
+	return tasks, nil
 }
 
-// Update sets the done status of a task by ID.
-func (s *TasksService) Update(ctx context.Context, id string, done bool) (model.Task, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i, t := range s.tasks {
-		if t.ID == id {
-			s.tasks[i].Done = done
-			return s.tasks[i], nil
+// Create adds a new task for the given user.
+func (s *TasksService) Create(ctx context.Context, userID string, text string, priority string) (model.Task, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return model.Task{}, fmt.Errorf("%w: task text cannot be empty", ErrTaskValidation)
+	}
+
+	if priority == "" {
+		priority = "medium"
+	}
+	if priority != "high" && priority != "medium" && priority != "low" {
+		return model.Task{}, fmt.Errorf("%w: invalid priority %q", ErrTaskValidation, priority)
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		slog.Error("failed to generate UUID v7", "error", err)
+		return model.Task{}, fmt.Errorf("generate task id: %w", err)
+	}
+
+	row, err := s.repo.Create(ctx, repository.TaskCreate{
+		ID:         id.String(),
+		UserID:     userID,
+		Text:       text,
+		Done:       false,
+		PriorityID: priority,
+	})
+	if err != nil {
+		return model.Task{}, fmt.Errorf("create task: %w", err)
+	}
+	return rowToModel(row), nil
+}
+
+// Update modifies a task by ID, scoped to the given user.
+func (s *TasksService) Update(ctx context.Context, id string, userID string, done *bool, text *string, priority *string) (model.Task, error) {
+	if text != nil {
+		trimmed := strings.TrimSpace(*text)
+		if trimmed == "" {
+			return model.Task{}, fmt.Errorf("%w: task text cannot be empty", ErrTaskValidation)
 		}
+		text = &trimmed
 	}
-	return model.Task{}, fmt.Errorf("task %s not found", id)
+	if priority != nil && *priority != "high" && *priority != "medium" && *priority != "low" {
+		return model.Task{}, fmt.Errorf("%w: invalid priority %q", ErrTaskValidation, *priority)
+	}
+
+	row, err := s.repo.Update(ctx, id, userID, repository.TaskUpdate{
+		Done:       done,
+		Text:       text,
+		PriorityID: priority,
+	})
+	if err != nil {
+		return model.Task{}, fmt.Errorf("update task: %w", err)
+	}
+	return rowToModel(row), nil
 }
 
-// Delete removes a task by ID.
-func (s *TasksService) Delete(ctx context.Context, id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i, t := range s.tasks {
-		if t.ID == id {
-			s.tasks = append(s.tasks[:i], s.tasks[i+1:]...)
-			return nil
-		}
+// Delete soft-deletes a task by ID, scoped to the given user.
+func (s *TasksService) Delete(ctx context.Context, id string, userID string) error {
+	if err := s.repo.Delete(ctx, id, userID); err != nil {
+		return fmt.Errorf("delete task: %w", err)
 	}
-	return fmt.Errorf("task %s not found", id)
+	return nil
+}
+
+func rowToModel(r repository.TaskRow) model.Task {
+	return model.Task{
+		ID:       r.ID,
+		Text:     r.Text,
+		Done:     r.Done,
+		Priority: r.PriorityID,
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/daily-dashboard/backend/internal/middleware"
 	"github.com/daily-dashboard/backend/internal/model"
 	"github.com/daily-dashboard/backend/internal/service"
 )
@@ -64,7 +65,12 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 
 	g.Go(func() error {
-		data, err := h.stocks.Fetch(gctx)
+		sess, ok := middleware.SessionFromContext(gctx)
+		if !ok {
+			slog.Warn("stocks fetch skipped: no session in context")
+			return nil
+		}
+		data, err := h.stocks.Fetch(gctx, sess.UserID)
 		if err != nil {
 			slog.Warn("stocks unavailable", "error", err)
 			return nil
@@ -84,7 +90,12 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 	})
 
 	g.Go(func() error {
-		data, err := h.tasks.List(gctx)
+		sess, ok := middleware.SessionFromContext(gctx)
+		if !ok {
+			slog.Warn("tasks fetch skipped: no session in context")
+			return nil
+		}
+		data, err := h.tasks.List(gctx, sess.UserID)
 		if err != nil {
 			slog.Warn("tasks fetch failed", "error", err)
 			return nil
