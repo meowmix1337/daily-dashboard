@@ -117,7 +117,7 @@ func (r *SQLiteTaskRepository) Create(ctx context.Context, t TaskCreate) (TaskRo
 	return r.Get(ctx, t.ID, t.UserID)
 }
 
-func (r *SQLiteTaskRepository) Update(ctx context.Context, id string, userID string, u TaskUpdate) (int64, error) {
+func (r *SQLiteTaskRepository) Update(ctx context.Context, id string, userID string, u TaskUpdate) error {
 	now := time.Now().UTC().Format(timeFormat)
 
 	// Build a single UPDATE statement with all changed fields.
@@ -145,29 +145,20 @@ func (r *SQLiteTaskRepository) Update(ctx context.Context, id string, userID str
 		" WHERE id = ? AND user_id = ? AND deleted_at IS NULL"
 	args = append(args, id, userID)
 
-	result, err := r.db.ExecContext(ctx, query, args...)
-	if err != nil {
-		return 0, fmt.Errorf("update task: %w", err)
+	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("update task: %w", err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("update task rows affected: %w", err)
-	}
-	return rows, nil
+	return nil
 }
 
-func (r *SQLiteTaskRepository) Delete(ctx context.Context, id string, userID string) (int64, error) {
+func (r *SQLiteTaskRepository) Delete(ctx context.Context, id string, userID string) error {
 	now := time.Now().UTC().Format(timeFormat)
-	result, err := r.db.ExecContext(ctx,
+	_, err := r.db.ExecContext(ctx,
 		`UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
 		now, now, id, userID,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("delete task: %w", err)
+		return fmt.Errorf("delete task: %w", err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("delete task rows affected: %w", err)
-	}
-	return rows, nil
+	return nil
 }

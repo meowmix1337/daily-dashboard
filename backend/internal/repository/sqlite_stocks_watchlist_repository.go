@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -55,20 +56,33 @@ func (r *SQLiteStocksWatchlistRepository) Add(ctx context.Context, userID string
 	return nil
 }
 
-func (r *SQLiteStocksWatchlistRepository) Remove(ctx context.Context, userID string, symbol string) (int64, error) {
+func (r *SQLiteStocksWatchlistRepository) Get(ctx context.Context, userID string, symbol string) (WatchlistRow, error) {
+	var row WatchlistRow
+	err := r.db.GetContext(ctx, &row,
+		`SELECT id, user_id, symbol, created_at, updated_at
+		 FROM stocks_watchlist
+		 WHERE user_id = ? AND symbol = ? AND deleted_at IS NULL`,
+		userID, symbol,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return WatchlistRow{}, sql.ErrNoRows
+		}
+		return WatchlistRow{}, fmt.Errorf("get watchlist symbol: %w", err)
+	}
+	return row, nil
+}
+
+func (r *SQLiteStocksWatchlistRepository) Remove(ctx context.Context, userID string, symbol string) error {
 	now := time.Now().UTC().Format(timeFormat)
-	result, err := r.db.ExecContext(ctx,
+	_, err := r.db.ExecContext(ctx,
 		`UPDATE stocks_watchlist
 		 SET deleted_at = ?, updated_at = ?
 		 WHERE user_id = ? AND symbol = ? AND deleted_at IS NULL`,
 		now, now, userID, symbol,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("remove from watchlist: %w", err)
+		return fmt.Errorf("remove from watchlist: %w", err)
 	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("remove from watchlist rows affected: %w", err)
-	}
-	return rows, nil
+	return nil
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -88,17 +89,24 @@ func (s *TasksService) Update(ctx context.Context, id string, userID string, don
 		return model.Task{}, fmt.Errorf("%w: invalid priority %q", ErrTaskValidation, *priority)
 	}
 
-	n, err := s.repo.Update(ctx, id, userID, repository.TaskUpdate{
+	// 1. Verify the task exists and belongs to this user.
+	if _, err := s.repo.Get(ctx, id, userID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, repository.ErrTaskNotFound) {
+			return model.Task{}, ErrTaskNotFound
+		}
+		return model.Task{}, fmt.Errorf("get task: %w", err)
+	}
+
+	// 2. Apply the update.
+	if err := s.repo.Update(ctx, id, userID, repository.TaskUpdate{
 		Done:       done,
 		Text:       text,
 		PriorityID: priority,
-	})
-	if err != nil {
+	}); err != nil {
 		return model.Task{}, fmt.Errorf("update task: %w", err)
 	}
-	if n == 0 {
-		return model.Task{}, ErrTaskNotFound
-	}
+
+	// 3. Re-fetch to return the current state.
 	row, err := s.repo.Get(ctx, id, userID)
 	if err != nil {
 		return model.Task{}, fmt.Errorf("fetch updated task: %w", err)
@@ -108,12 +116,17 @@ func (s *TasksService) Update(ctx context.Context, id string, userID string, don
 
 // Delete soft-deletes a task by ID, scoped to the given user.
 func (s *TasksService) Delete(ctx context.Context, id string, userID string) error {
-	n, err := s.repo.Delete(ctx, id, userID)
-	if err != nil {
-		return fmt.Errorf("delete task: %w", err)
+	// 1. Verify the task exists and belongs to this user.
+	if _, err := s.repo.Get(ctx, id, userID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, repository.ErrTaskNotFound) {
+			return ErrTaskNotFound
+		}
+		return fmt.Errorf("get task: %w", err)
 	}
-	if n == 0 {
-		return ErrTaskNotFound
+
+	// 2. Soft-delete it.
+	if err := s.repo.Delete(ctx, id, userID); err != nil {
+		return fmt.Errorf("delete task: %w", err)
 	}
 	return nil
 }

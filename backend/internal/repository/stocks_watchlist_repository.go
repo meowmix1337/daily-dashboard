@@ -21,8 +21,11 @@ type WatchlistRow struct {
 type StocksWatchlistRepository interface {
 	// List returns all active (non-deleted) symbols for the given user.
 	List(ctx context.Context, userID string) ([]WatchlistRow, error)
+	// Get returns the active watchlist row for the given user and symbol.
+	// Returns sql.ErrNoRows if not found.
+	Get(ctx context.Context, userID string, symbol string) (WatchlistRow, error)
 	// Add inserts or re-activates a symbol for the given user (UPSERT).
 	Add(ctx context.Context, userID string, symbol string) error
 	// Remove soft-deletes a symbol for the given user.
-	Remove(ctx context.Context, userID string, symbol string) (int64, error)
+	Remove(ctx context.Context, userID string, symbol string) error
 }
