@@ -21,7 +21,6 @@ type sqliteTaskRow struct {
 	UpdatedAt  string `db:"updated_at"`
 }
 
-const timeFormat = "2006-01-02T15:04:05.000Z"
 
 func (r *sqliteTaskRow) toTaskRow() (TaskRow, error) {
 	createdAt, err := time.Parse(timeFormat, r.CreatedAt)

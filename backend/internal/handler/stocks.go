@@ -9,16 +9,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
+	"github.com/go-playground/validator/v10"
 
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
 type StocksHandler struct {
-	service *service.StocksService
+	service  *service.StocksService
+	validate *validator.Validate
 }
 
-func NewStocksHandler(svc *service.StocksService) *StocksHandler {
-	return &StocksHandler{service: svc}
+func NewStocksHandler(svc *service.StocksService, v *validator.Validate) *StocksHandler {
+	return &StocksHandler{service: svc, validate: v}
 }
 
 func (h *StocksHandler) AddRoutes(r chi.Router) {
@@ -76,6 +78,10 @@ func (h *StocksHandler) AddSymbol(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 4096) // 4 KB is generous for these small JSON bodies
 	var body AddSymbolRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if err := h.validate.Struct(&body); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}

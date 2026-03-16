@@ -16,16 +16,15 @@ import (
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
-var taskValidator = validator.New()
-
 // TasksHandler handles CRUD for user-scoped tasks.
 type TasksHandler struct {
-	service *service.TasksService
+	service  *service.TasksService
+	validate *validator.Validate
 }
 
 // NewTasksHandler creates a new TasksHandler.
-func NewTasksHandler(svc *service.TasksService) *TasksHandler {
-	return &TasksHandler{service: svc}
+func NewTasksHandler(svc *service.TasksService, v *validator.Validate) *TasksHandler {
+	return &TasksHandler{service: svc, validate: v}
 }
 
 // AddRoutes registers task routes on the given router.
@@ -67,7 +66,7 @@ func (h *TasksHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	if err := taskValidator.Struct(&req); err != nil {
+	if err := h.validate.Struct(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}

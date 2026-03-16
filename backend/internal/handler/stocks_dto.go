@@ -2,7 +2,7 @@ package handler
 
 // AddSymbolRequest is the JSON body for POST /api/stocks/watchlist.
 type AddSymbolRequest struct {
-	Symbol string `json:"symbol"`
+	Symbol string `json:"symbol" validate:"required,min=1,max=20"`
 }
 
 // WatchlistResponse is the JSON response for watchlist operations.
