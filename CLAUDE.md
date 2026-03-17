@@ -13,6 +13,7 @@ go build ./...               # Compile all packages
 go vet ./...                 # Lint
 go test -race ./...          # Run tests
 go build -o bin/server ./cmd/server  # Build binary
+govulncheck ./...                    # Scan for known vulnerabilities (install: go install golang.org/x/vuln/cmd/govulncheck@latest)
 ```
 
 ### Frontend (run from `frontend/`)

@@ -26,6 +26,7 @@ type Config struct {
 	SessionKey         []byte // decoded bytes of SessionSecret; populated by main after validation
 	FrontendURL        string // post-login redirect target — required
 	SecureCookies      bool   // set Secure flag on cookies; default true, disable only for local HTTP dev
+	CORSOrigin         string // allowed CORS origin; defaults to http://localhost:5173
 }
 
 func Load() *Config {
@@ -62,6 +63,7 @@ func Load() *Config {
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
 		FrontendURL:        os.Getenv("FRONTEND_URL"),
 		SecureCookies:      os.Getenv("SECURE_COOKIES") != "false",
+		CORSOrigin:         corsOrigin(os.Getenv("CORS_ORIGIN")),
 	}
 }
 
@@ -105,6 +107,13 @@ func parseDotEnv(path string) bool {
 func sqlitePath(s string) string {
 	if s == "" {
 		return "dashboard.db"
+	}
+	return s
+}
+
+func corsOrigin(s string) string {
+	if s == "" {
+		return "http://localhost:5173"
 	}
 	return s
 }
