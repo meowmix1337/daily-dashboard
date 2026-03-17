@@ -3,6 +3,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import { useClock } from '../hooks/useClock';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useWindowSize } from '../hooks/useWindowSize';
 import { WeatherCard } from './WeatherCard';
 import { CalendarCard } from './CalendarCard';
 import { TasksCard } from './TasksCard';
@@ -75,8 +76,12 @@ export default function Dashboard(): React.ReactElement {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const now = useClock();
+  const { breakpoint } = useWindowSize();
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [toggleHovered, setToggleHovered] = useState(false);
+
+  const isMobile = breakpoint === 'mobile';
+  const isTablet = breakpoint === 'tablet';
 
   useEffect(() => {
     const t = setTimeout(() => setHeaderLoaded(true), 100);
@@ -91,7 +96,7 @@ export default function Dashboard(): React.ReactElement {
       background: 'var(--bg-primary)',
       color: 'var(--text-primary)',
       fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-      padding: 32,
+      padding: isMobile ? 16 : isTablet ? 24 : 32,
       position: 'relative',
     }}>
       {/* Ambient background gradients */}
@@ -121,17 +126,19 @@ export default function Dashboard(): React.ReactElement {
           transform: headerLoaded ? 'translateY(0)' : 'translateY(12px)',
           transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
           display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          marginBottom: 40,
+          alignItems: isMobile ? 'flex-start' : 'flex-end',
+          gap: isMobile ? 16 : 0,
+          marginBottom: isMobile ? 24 : 40,
           borderBottom: '1px solid var(--header-border)',
-          paddingBottom: 24,
+          paddingBottom: isMobile ? 16 : 24,
           position: 'relative',
           zIndex: 10,
         }}>
           <div>
             <div style={{
-              fontSize: 14,
+              fontSize: isMobile ? 12 : 14,
               fontWeight: 500,
               color: 'var(--text-accent)',
               letterSpacing: '0.12em',
@@ -142,7 +149,7 @@ export default function Dashboard(): React.ReactElement {
             </div>
             <h1 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: 42,
+              fontSize: isMobile ? 28 : isTablet ? 34 : 42,
               fontWeight: 700,
               margin: 0,
               background: 'linear-gradient(135deg, var(--gradient-heading-start) 0%, var(--gradient-heading-end) 100%)',
@@ -152,18 +159,18 @@ export default function Dashboard(): React.ReactElement {
               {getGreeting(now)}
             </h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
-            <div style={{ textAlign: 'right' }}>
+          <div style={{ display: 'flex', alignItems: isMobile ? 'center' : 'flex-end', gap: 16, alignSelf: isMobile ? 'stretch' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+            <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
               <div style={{
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 32,
+                fontSize: isMobile ? 22 : isTablet ? 26 : 32,
                 fontWeight: 500,
                 color: 'var(--text-clock)',
                 letterSpacing: '-0.02em',
               }}>
                 {formatTime(now)}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+              <div style={{ fontSize: isMobile ? 11 : 13, color: 'var(--text-secondary)', marginTop: 4 }}>
                 {data?.meta?.sunrise
                   ? `☀️ ${data.meta.sunrise} → 🌙 ${data.meta.sunset} · ${data.meta.daylight} daylight`
                   : '☀️ — → 🌙 — · — daylight'}
@@ -235,15 +242,15 @@ export default function Dashboard(): React.ReactElement {
         {/* Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gap: 20,
+          gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : '1fr 1fr 1fr',
+          gap: isMobile ? 12 : 20,
         }}>
           {isLoading ? (
             <>
               <CardSkeleton span={1} rows={4} />
               <CardSkeleton span={1} rows={5} />
               <CardSkeleton span={1} rows={5} />
-              <CardSkeleton span={2} rows={4} />
+              <CardSkeleton span={isMobile || isTablet ? 1 : 2} rows={4} />
               <CardSkeleton span={1} rows={2} />
             </>
           ) : (
@@ -266,7 +273,7 @@ export default function Dashboard(): React.ReactElement {
               )}
 
               {/* Row 2 */}
-              <NewsCard delay={0.5} />
+              <NewsCard delay={0.5} isMobile={isMobile} isTablet={isTablet} />
               {data?.meta?.quote?.text ? (
                 <QuoteCard data={data.meta.quote} delay={0.6} />
               ) : (
@@ -278,12 +285,14 @@ export default function Dashboard(): React.ReactElement {
 
         {/* Footer */}
         <div style={{
-          marginTop: 32,
+          marginTop: isMobile ? 16 : 32,
           paddingTop: 20,
           borderTop: '1px solid var(--footer-border)',
           display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? 4 : 0,
           opacity: 0.5,
         }}>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>

@@ -5,6 +5,8 @@ import { CardHeader } from './ui/CardHeader';
 
 interface NewsCardProps {
   delay?: number;
+  isMobile?: boolean;
+  isTablet?: boolean;
 }
 
 function titleCase(s: string): string {
@@ -23,14 +25,14 @@ function Skeleton({ width = '100%', height = 16 }: { width?: string | number; he
   );
 }
 
-export function NewsCard({ delay = 0 }: NewsCardProps): React.ReactElement {
+export function NewsCard({ delay = 0, isMobile = false, isTablet = false }: NewsCardProps): React.ReactElement {
   const { data: categories, isLoading, isError, refetch, isFetching } = useNews();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const active = categories?.[activeIndex] ?? { name: '', items: [] };
 
   return (
-    <Card delay={delay} span={2}>
+    <Card delay={delay} span={isMobile || isTablet ? 1 : 2}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <CardHeader icon="⊞" title="Headlines" />
         <button
@@ -58,7 +60,7 @@ export function NewsCard({ delay = 0 }: NewsCardProps): React.ReactElement {
               <Skeleton key={i} width={60} height={26} />
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '14px 16px', borderRadius: 10, background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
                 <Skeleton width="30%" height={11} />
@@ -116,7 +118,7 @@ export function NewsCard({ delay = 0 }: NewsCardProps): React.ReactElement {
               No articles available
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
               {active.items.map((item, i) => (
                 <div
                   key={i}
