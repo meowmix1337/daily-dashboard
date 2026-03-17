@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
   closestCenter,
-  type DraggableAttributes,
-  type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -59,7 +59,6 @@ function formatDate(date: Date): string {
   });
 }
 
-// Skeleton pulse component
 function Skeleton({ width = '100%', height = 16 }: { width?: string | number; height?: number }): React.ReactElement {
   return (
     <div style={{
@@ -72,7 +71,6 @@ function Skeleton({ width = '100%', height = 16 }: { width?: string | number; he
   );
 }
 
-// Card skeleton for loading state
 function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }): React.ReactElement {
   return (
     <div style={{
@@ -92,55 +90,7 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
   );
 }
 
-// Drag handle button — 6-dot SVG grid icon, visible on hover
-interface DragHandleProps {
-  listeners: DraggableSyntheticListeners | undefined;
-  attributes: DraggableAttributes;
-}
-
-function DragHandle({ listeners, attributes }: DragHandleProps): React.ReactElement {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      {...attributes}
-      {...listeners}
-      aria-label="Drag to reorder card"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: 'absolute',
-        top: 8,
-        left: 12,
-        width: 24,
-        height: 24,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'transparent',
-        border: 'none',
-        borderRadius: 4,
-        cursor: 'grab',
-        color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
-        opacity: hovered ? 1 : 0.55,
-        transition: 'opacity 0.2s ease, color 0.2s ease',
-        userSelect: 'none',
-        touchAction: 'none',
-        zIndex: 2,
-      }}
-    >
-      <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden>
-        <circle cx="2" cy="2" r="1.5" />
-        <circle cx="2" cy="7" r="1.5" />
-        <circle cx="2" cy="12" r="1.5" />
-        <circle cx="8" cy="2" r="1.5" />
-        <circle cx="8" cy="7" r="1.5" />
-        <circle cx="8" cy="12" r="1.5" />
-      </svg>
-    </button>
-  );
-}
-
-// Sortable wrapper — owns gridColumn so the drag transform works on the grid child
+// Sortable wrapper — owns gridColumn, ghost slot, pill grip handle, and drop highlighting
 interface SortableCardWrapperProps {
   id: CardId;
   span: number;
@@ -158,7 +108,28 @@ function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): 
     isOver,
   } = useSortable({ id });
 
-  const transformStyle = CSS.Transform.toString(transform);
+  const [gripHovered, setGripHovered] = useState(false);
+
+  // Ghost slot: card stays in the grid as a dashed placeholder while
+  // the DragOverlay shows the floating lifted card.
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          gridColumn: `span ${span}`,
+          borderRadius: 16,
+          border: '2px dashed rgba(99,102,241,0.35)',
+          background: 'rgba(99,102,241,0.04)',
+        }}
+      >
+        {/* Hidden children preserve the slot's natural height */}
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+          {children}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -166,22 +137,66 @@ function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): 
       style={{
         gridColumn: `span ${span}`,
         position: 'relative',
-        transform: transformStyle ?? undefined,
-        // Combine dnd-kit transition with drop-target transitions
-        transition: [transition, 'border 0.15s ease', 'background 0.15s ease'].filter(Boolean).join(', '),
-        zIndex: isDragging ? 10 : undefined,
-        // Lift effect: scale + deep shadow instead of opacity fade
-        scale: isDragging ? '1.02' : undefined,
-        boxShadow: isDragging
-          ? '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.3)'
-          : undefined,
-        // Drop target highlight
+        transform: CSS.Transform.toString(transform) ?? undefined,
+        transition: [transition, 'border 0.15s ease', 'background 0.15s ease', 'box-shadow 0.15s ease']
+          .filter(Boolean).join(', '),
         borderRadius: 16,
-        border: isOver && !isDragging ? '1px solid rgba(99,102,241,0.5)' : '1px solid transparent',
-        background: isOver && !isDragging ? 'rgba(99,102,241,0.06)' : 'transparent',
+        // Drop destination highlight
+        border: isOver ? '2px solid rgba(99,102,241,0.55)' : '2px solid transparent',
+        background: isOver ? 'rgba(99,102,241,0.07)' : 'transparent',
+        boxShadow: isOver ? '0 0 0 4px rgba(99,102,241,0.12)' : undefined,
       }}
     >
-      <DragHandle listeners={listeners} attributes={attributes} />
+      {/* Centered pill grip — large hit area, subtle pill visual that grows on hover */}
+      <div
+        {...attributes}
+        {...listeners}
+        onMouseEnter={() => setGripHovered(true)}
+        onMouseLeave={() => setGripHovered(false)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 64,
+          height: 22,
+          cursor: 'grab',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          touchAction: 'none',
+          userSelect: 'none',
+          zIndex: 2,
+        }}
+      >
+        <div style={{
+          width: gripHovered ? 40 : 28,
+          height: 4,
+          borderRadius: 2,
+          background: gripHovered ? 'rgba(99,102,241,0.65)' : 'rgba(255,255,255,0.18)',
+          transition: 'background 0.2s ease, width 0.2s ease',
+        }} />
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+// The floating card rendered by DragOverlay while a drag is in progress
+function DragOverlayCard({ children }: { children: React.ReactNode }): React.ReactElement {
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--bg-card-border)',
+      borderRadius: 16,
+      padding: 24,
+      backdropFilter: 'blur(20px)',
+      boxShadow: '0 28px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(99,102,241,0.4)',
+      scale: '1.03',
+      opacity: 0.97,
+      cursor: 'grabbing',
+    }}>
       {children}
     </div>
   );
@@ -196,6 +211,7 @@ export default function Dashboard(): React.ReactElement {
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [toggleHovered, setToggleHovered] = useState(false);
   const [cardOrder, setCardOrder] = useCardOrder();
+  const [activeId, setActiveId] = useState<CardId | null>(null);
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
@@ -207,7 +223,6 @@ export default function Dashboard(): React.ReactElement {
 
   const lastUpdated = formatTime(now);
 
-  // Span for each card — news is 2 on desktop, 1 otherwise
   function getSpan(id: CardId): number {
     if (id === 'news') return isMobile || isTablet ? 1 : 2;
     return 1;
@@ -219,13 +234,22 @@ export default function Dashboard(): React.ReactElement {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  function handleDragStart(event: DragStartEvent): void {
+    setActiveId(event.active.id as CardId);
+  }
+
   function handleDragEnd(event: DragEndEvent): void {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = cardOrder.indexOf(active.id as CardId);
     const newIndex = cardOrder.indexOf(over.id as CardId);
     if (oldIndex === -1 || newIndex === -1) return;
     setCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
+  }
+
+  function handleDragCancel(): void {
+    setActiveId(null);
   }
 
   const renderCard = useCallback(function renderCard(id: CardId): React.ReactNode {
@@ -270,7 +294,6 @@ export default function Dashboard(): React.ReactElement {
       padding: isMobile ? 16 : isTablet ? 24 : 32,
       position: 'relative',
     }}>
-      {/* Ambient background gradients */}
       <div style={{
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
@@ -407,10 +430,9 @@ export default function Dashboard(): React.ReactElement {
           </div>
         )}
 
-        {/* Ticker bar */}
         <StocksCard stocks={data?.stocks ?? null} delay={0.1} />
 
-        {/* Grid */}
+        {/* Card grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : '1fr 1fr 1fr',
@@ -428,7 +450,9 @@ export default function Dashboard(): React.ReactElement {
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
             >
               <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
                 {cardOrder.map((id) => (
@@ -437,6 +461,15 @@ export default function Dashboard(): React.ReactElement {
                   </SortableCardWrapper>
                 ))}
               </SortableContext>
+
+              {/* Floating card that follows the cursor during drag */}
+              <DragOverlay>
+                {activeId ? (
+                  <DragOverlayCard>
+                    {renderCard(activeId)}
+                  </DragOverlayCard>
+                ) : null}
+              </DragOverlay>
             </DndContext>
           )}
         </div>
