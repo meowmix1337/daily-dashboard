@@ -101,6 +101,10 @@ func (h *TasksHandler) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	if err := h.validate.Struct(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
 
 	task, err := h.service.Update(r.Context(), id, userID, req.Done, req.Text, req.Priority)
 	if err != nil {
