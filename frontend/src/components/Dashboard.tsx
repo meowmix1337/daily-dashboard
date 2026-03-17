@@ -1,9 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  closestCenter,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useDashboard } from '../hooks/useDashboard';
 import { useClock } from '../hooks/useClock';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useWindowSize } from '../hooks/useWindowSize';
+import { useCardOrder, type CardId } from '../hooks/useCardOrder';
 import { WeatherCard } from './WeatherCard';
 import { CalendarCard } from './CalendarCard';
 import { TasksCard } from './TasksCard';
@@ -38,7 +59,6 @@ function formatDate(date: Date): string {
   });
 }
 
-// Skeleton pulse component
 function Skeleton({ width = '100%', height = 16 }: { width?: string | number; height?: number }): React.ReactElement {
   return (
     <div style={{
@@ -51,7 +71,6 @@ function Skeleton({ width = '100%', height = 16 }: { width?: string | number; he
   );
 }
 
-// Card skeleton for loading state
 function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }): React.ReactElement {
   return (
     <div style={{
@@ -71,6 +90,124 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
   );
 }
 
+// Sortable wrapper — owns gridColumn, ghost slot, pill grip handle, and drop highlighting
+interface SortableCardWrapperProps {
+  id: CardId;
+  span: number;
+  children: React.ReactNode;
+}
+
+function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): React.ReactElement {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver,
+  } = useSortable({ id });
+
+  const [gripHovered, setGripHovered] = useState(false);
+
+  // FROM location: invisible slot — card is floating via DragOverlay, source just holds space
+  if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{ gridColumn: `span ${span}`, borderRadius: 16 }}
+      >
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>{children}</div>
+      </div>
+    );
+  }
+
+  // TO location: dashed ghost slot — shows exactly where the dragged card will land
+  if (isOver) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          gridColumn: `span ${span}`,
+          transform: CSS.Transform.toString(transform) ?? undefined,
+          transition,
+          borderRadius: 16,
+          border: '2px dashed rgba(99,102,241,0.55)',
+          background: 'rgba(99,102,241,0.07)',
+          boxShadow: '0 0 0 4px rgba(99,102,241,0.12)',
+        }}
+      >
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>{children}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        gridColumn: `span ${span}`,
+        position: 'relative',
+        transform: CSS.Transform.toString(transform) ?? undefined,
+        transition,
+        borderRadius: 16,
+      }}
+    >
+      {/* Centered pill grip — large hit area, subtle pill visual that grows on hover */}
+      <div
+        {...attributes}
+        {...listeners}
+        onMouseEnter={() => setGripHovered(true)}
+        onMouseLeave={() => setGripHovered(false)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 64,
+          height: 22,
+          cursor: 'grab',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          touchAction: 'none',
+          userSelect: 'none',
+          zIndex: 2,
+        }}
+      >
+        <div style={{
+          width: gripHovered ? 40 : 28,
+          height: 4,
+          borderRadius: 2,
+          background: gripHovered ? 'rgba(99,102,241,0.65)' : 'rgba(255,255,255,0.18)',
+          transition: 'background 0.2s ease, width 0.2s ease',
+        }} />
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+// The floating card rendered by DragOverlay while a drag is in progress
+function DragOverlayCard({ children }: { children: React.ReactNode }): React.ReactElement {
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--bg-card-border)',
+      borderRadius: 16,
+      padding: 24,
+      backdropFilter: 'blur(20px)',
+      boxShadow: '0 28px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(99,102,241,0.4)',
+      scale: '1.03',
+      opacity: 0.97,
+      cursor: 'grabbing',
+    }}>
+      {children}
+    </div>
+  );
+}
+
 export default function Dashboard(): React.ReactElement {
   const { data, isLoading, isError, refetch } = useDashboard();
   const { user } = useAuth();
@@ -79,6 +216,8 @@ export default function Dashboard(): React.ReactElement {
   const { breakpoint } = useWindowSize();
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [toggleHovered, setToggleHovered] = useState(false);
+  const [cardOrder, setCardOrder] = useCardOrder();
+  const [activeId, setActiveId] = useState<CardId | null>(null);
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
@@ -90,6 +229,68 @@ export default function Dashboard(): React.ReactElement {
 
   const lastUpdated = formatTime(now);
 
+  function getSpan(id: CardId): number {
+    if (id === 'news') return isMobile || isTablet ? 1 : 2;
+    return 1;
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragStart(event: DragStartEvent): void {
+    setActiveId(event.active.id as CardId);
+  }
+
+  function handleDragEnd(event: DragEndEvent): void {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = cardOrder.indexOf(active.id as CardId);
+    const newIndex = cardOrder.indexOf(over.id as CardId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    setCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
+  }
+
+  function handleDragCancel(): void {
+    setActiveId(null);
+  }
+
+  const renderCard = useCallback(function renderCard(id: CardId): React.ReactNode {
+    switch (id) {
+      case 'weather':
+        return data?.weather ? (
+          <WeatherCard data={data.weather} delay={0.2} noGridSpan />
+        ) : (
+          <UnavailableCard span={1} label="Weather unavailable" noGridSpan />
+        );
+      case 'calendar':
+        return data?.calendar ? (
+          <CalendarCard events={data.calendar} delay={0.3} noGridSpan />
+        ) : (
+          <CardSkeleton span={1} rows={5} />
+        );
+      case 'tasks':
+        return data?.tasks ? (
+          <TasksCard tasks={data.tasks} delay={0.4} noGridSpan />
+        ) : (
+          <CardSkeleton span={1} rows={5} />
+        );
+      case 'news':
+        return <NewsCard delay={0.5} isMobile={isMobile} isTablet={isTablet} noGridSpan />;
+      case 'quote':
+        return data?.meta?.quote?.text ? (
+          <QuoteCard data={data.meta.quote} delay={0.6} noGridSpan />
+        ) : (
+          <UnavailableCard span={1} label="Quote unavailable" noGridSpan />
+        );
+      default:
+        return null;
+    }
+  }, [data, isMobile, isTablet]);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -99,7 +300,6 @@ export default function Dashboard(): React.ReactElement {
       padding: isMobile ? 16 : isTablet ? 24 : 32,
       position: 'relative',
     }}>
-      {/* Ambient background gradients */}
       <div style={{
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
@@ -236,10 +436,9 @@ export default function Dashboard(): React.ReactElement {
           </div>
         )}
 
-        {/* Ticker bar */}
         <StocksCard stocks={data?.stocks ?? null} delay={0.1} />
 
-        {/* Grid */}
+        {/* Card grid */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : isTablet ? '1fr 1fr' : '1fr 1fr 1fr',
@@ -254,32 +453,30 @@ export default function Dashboard(): React.ReactElement {
               <CardSkeleton span={1} rows={2} />
             </>
           ) : (
-            <>
-              {/* Row 1 */}
-              {data?.weather ? (
-                <WeatherCard data={data.weather} delay={0.2} />
-              ) : (
-                <UnavailableCard span={1} label="Weather unavailable" />
-              )}
-              {data?.calendar ? (
-                <CalendarCard events={data.calendar} delay={0.3} />
-              ) : (
-                <CardSkeleton span={1} rows={5} />
-              )}
-              {data?.tasks ? (
-                <TasksCard tasks={data.tasks} delay={0.4} />
-              ) : (
-                <CardSkeleton span={1} rows={5} />
-              )}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
+              <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
+                {cardOrder.map((id) => (
+                  <SortableCardWrapper key={id} id={id} span={getSpan(id)}>
+                    {renderCard(id)}
+                  </SortableCardWrapper>
+                ))}
+              </SortableContext>
 
-              {/* Row 2 */}
-              <NewsCard delay={0.5} isMobile={isMobile} isTablet={isTablet} />
-              {data?.meta?.quote?.text ? (
-                <QuoteCard data={data.meta.quote} delay={0.6} />
-              ) : (
-                <UnavailableCard span={1} label="Quote unavailable" />
-              )}
-            </>
+              {/* Floating card that follows the cursor during drag */}
+              <DragOverlay>
+                {activeId ? (
+                  <DragOverlayCard>
+                    {renderCard(activeId)}
+                  </DragOverlayCard>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </div>
 

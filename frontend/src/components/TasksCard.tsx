@@ -7,6 +7,7 @@ import { useTasks } from '../hooks/useTasks';
 interface TasksCardProps {
   tasks: Task[];
   delay?: number;
+  noGridSpan?: boolean;
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -17,7 +18,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 const PRIORITY_CYCLE: Task['priority'][] = ['high', 'medium', 'low'];
 
-export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElement {
+export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
   const { toggle, create, remove } = useTasks();
   const [newText, setNewText] = useState('');
   const [newPriority, setNewPriority] = useState<Task['priority']>('medium');
@@ -37,7 +38,7 @@ export function TasksCard({ tasks, delay = 0 }: TasksCardProps): React.ReactElem
   }
 
   return (
-    <Card delay={delay}>
+    <Card delay={delay} noGridSpan={noGridSpan}>
       <CardHeader
         icon="◉"
         title="Tasks"

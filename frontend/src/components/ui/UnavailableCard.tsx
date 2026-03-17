@@ -1,9 +1,9 @@
 import React from 'react';
 
-export function UnavailableCard({ span = 1, label }: { span?: number; label: string }): React.ReactElement {
+export function UnavailableCard({ span = 1, label, noGridSpan = false }: { span?: number; label: string; noGridSpan?: boolean }): React.ReactElement {
   return (
     <div style={{
-      gridColumn: `span ${span}`,
+      ...(noGridSpan ? {} : { gridColumn: `span ${span}` }),
       background: 'var(--bg-card)',
       border: '1px solid var(--bg-card-border)',
       borderRadius: 16,

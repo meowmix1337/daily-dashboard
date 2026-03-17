@@ -7,6 +7,7 @@ interface NewsCardProps {
   delay?: number;
   isMobile?: boolean;
   isTablet?: boolean;
+  noGridSpan?: boolean;
 }
 
 function titleCase(s: string): string {
@@ -25,14 +26,14 @@ function Skeleton({ width = '100%', height = 16 }: { width?: string | number; he
   );
 }
 
-export function NewsCard({ delay = 0, isMobile = false, isTablet = false }: NewsCardProps): React.ReactElement {
+export function NewsCard({ delay = 0, isMobile = false, isTablet = false, noGridSpan = false }: NewsCardProps): React.ReactElement {
   const { data: categories, isLoading, isError, refetch, isFetching } = useNews();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const active = categories?.[activeIndex] ?? { name: '', items: [] };
 
   return (
-    <Card delay={delay} span={isMobile || isTablet ? 1 : 2}>
+    <Card delay={delay} span={isMobile || isTablet ? 1 : 2} noGridSpan={noGridSpan}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <CardHeader icon="⊞" title="Headlines" />
         <button
