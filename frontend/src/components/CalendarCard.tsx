@@ -13,9 +13,10 @@ function formatEventTime(raw: string): string {
 interface CalendarCardProps {
   events: CalendarEvent[];
   delay?: number;
+  noGridSpan?: boolean;
 }
 
-export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.ReactElement {
+export function CalendarCard({ events, delay = 0, noGridSpan = false }: CalendarCardProps): React.ReactElement {
   const now = new Date();
 
   const nextIndex = events.findIndex(e => {
@@ -31,7 +32,7 @@ export function CalendarCard({ events, delay = 0 }: CalendarCardProps): React.Re
   }
 
   return (
-    <Card delay={delay}>
+    <Card delay={delay} noGridSpan={noGridSpan}>
       <CardHeader icon="▦" title="Today's Schedule" badge={`${events.length} events`} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {events.map((event, i) => {

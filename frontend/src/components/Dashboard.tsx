@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  closestCenter,
+  DraggableAttributes,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+  SyntheticListenerMap,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useDashboard } from '../hooks/useDashboard';
 import { useClock } from '../hooks/useClock';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useWindowSize } from '../hooks/useWindowSize';
+import { useCardOrder, CardId } from '../hooks/useCardOrder';
 import { WeatherCard } from './WeatherCard';
 import { CalendarCard } from './CalendarCard';
 import { TasksCard } from './TasksCard';
@@ -71,6 +89,86 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
   );
 }
 
+// Drag handle button — subtle braille dots icon, visible on hover
+interface DragHandleProps {
+  listeners: SyntheticListenerMap | undefined;
+  attributes: DraggableAttributes;
+}
+
+function DragHandle({ listeners, attributes }: DragHandleProps): React.ReactElement {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      {...attributes}
+      {...listeners}
+      aria-label="Drag to reorder card"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        width: 24,
+        height: 24,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'transparent',
+        border: 'none',
+        borderRadius: 4,
+        cursor: 'grab',
+        color: hovered ? 'var(--text-secondary)' : 'var(--text-muted)',
+        opacity: hovered ? 1 : 0.35,
+        fontSize: 14,
+        lineHeight: 1,
+        transition: 'opacity 0.2s ease, color 0.2s ease',
+        userSelect: 'none',
+        touchAction: 'none',
+        zIndex: 2,
+      }}
+    >
+      ⠿
+    </button>
+  );
+}
+
+// Sortable wrapper — owns gridColumn so the drag transform works on the grid child
+interface SortableCardWrapperProps {
+  id: CardId;
+  span: number;
+  children: React.ReactNode;
+}
+
+function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): React.ReactElement {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const transformStyle = CSS.Transform.toString(transform);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        gridColumn: `span ${span}`,
+        position: 'relative',
+        transform: transformStyle ?? undefined,
+        transition,
+        zIndex: isDragging ? 10 : undefined,
+        opacity: isDragging ? 0.8 : 1,
+      }}
+    >
+      <DragHandle listeners={listeners} attributes={attributes} />
+      {children}
+    </div>
+  );
+}
+
 export default function Dashboard(): React.ReactElement {
   const { data, isLoading, isError, refetch } = useDashboard();
   const { user } = useAuth();
@@ -79,6 +177,7 @@ export default function Dashboard(): React.ReactElement {
   const { breakpoint } = useWindowSize();
   const [headerLoaded, setHeaderLoaded] = useState(false);
   const [toggleHovered, setToggleHovered] = useState(false);
+  const [cardOrder, setCardOrder] = useCardOrder();
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
@@ -89,6 +188,60 @@ export default function Dashboard(): React.ReactElement {
   }, []);
 
   const lastUpdated = formatTime(now);
+
+  // Span for each card — news is 2 on desktop, 1 otherwise
+  function getSpan(id: CardId): number {
+    if (id === 'news') return isMobile || isTablet ? 1 : 2;
+    return 1;
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent): void {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = cardOrder.indexOf(active.id as CardId);
+      const newIndex = cardOrder.indexOf(over.id as CardId);
+      setCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
+    }
+  }
+
+  function renderCard(id: CardId): React.ReactNode {
+    switch (id) {
+      case 'weather':
+        return data?.weather ? (
+          <WeatherCard data={data.weather} delay={0.2} noGridSpan />
+        ) : (
+          <UnavailableCard span={1} label="Weather unavailable" noGridSpan />
+        );
+      case 'calendar':
+        return data?.calendar ? (
+          <CalendarCard events={data.calendar} delay={0.3} noGridSpan />
+        ) : (
+          <CardSkeleton span={1} rows={5} />
+        );
+      case 'tasks':
+        return data?.tasks ? (
+          <TasksCard tasks={data.tasks} delay={0.4} noGridSpan />
+        ) : (
+          <CardSkeleton span={1} rows={5} />
+        );
+      case 'news':
+        return <NewsCard delay={0.5} isMobile={isMobile} isTablet={isTablet} noGridSpan />;
+      case 'quote':
+        return data?.meta?.quote?.text ? (
+          <QuoteCard data={data.meta.quote} delay={0.6} noGridSpan />
+        ) : (
+          <UnavailableCard span={1} label="Quote unavailable" noGridSpan />
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div style={{
@@ -254,32 +407,19 @@ export default function Dashboard(): React.ReactElement {
               <CardSkeleton span={1} rows={2} />
             </>
           ) : (
-            <>
-              {/* Row 1 */}
-              {data?.weather ? (
-                <WeatherCard data={data.weather} delay={0.2} />
-              ) : (
-                <UnavailableCard span={1} label="Weather unavailable" />
-              )}
-              {data?.calendar ? (
-                <CalendarCard events={data.calendar} delay={0.3} />
-              ) : (
-                <CardSkeleton span={1} rows={5} />
-              )}
-              {data?.tasks ? (
-                <TasksCard tasks={data.tasks} delay={0.4} />
-              ) : (
-                <CardSkeleton span={1} rows={5} />
-              )}
-
-              {/* Row 2 */}
-              <NewsCard delay={0.5} isMobile={isMobile} isTablet={isTablet} />
-              {data?.meta?.quote?.text ? (
-                <QuoteCard data={data.meta.quote} delay={0.6} />
-              ) : (
-                <UnavailableCard span={1} label="Quote unavailable" />
-              )}
-            </>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={cardOrder} strategy={rectSortingStrategy}>
+                {cardOrder.map((id) => (
+                  <SortableCardWrapper key={id} id={id} span={getSpan(id)}>
+                    {renderCard(id)}
+                  </SortableCardWrapper>
+                ))}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 

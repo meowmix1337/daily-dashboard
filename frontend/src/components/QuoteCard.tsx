@@ -5,11 +5,12 @@ import { Card } from './ui/Card';
 interface QuoteCardProps {
   data: Quote;
   delay?: number;
+  noGridSpan?: boolean;
 }
 
-export function QuoteCard({ data, delay = 0 }: QuoteCardProps): React.ReactElement {
+export function QuoteCard({ data, delay = 0, noGridSpan = false }: QuoteCardProps): React.ReactElement {
   return (
-    <Card delay={delay}>
+    <Card delay={delay} noGridSpan={noGridSpan}>
       <div style={{
         height: '100%',
         display: 'flex',

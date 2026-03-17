@@ -7,13 +7,14 @@ import { MiniStat } from './ui/MiniStat';
 interface WeatherCardProps {
   data: WeatherData;
   delay?: number;
+  noGridSpan?: boolean;
 }
 
-export function WeatherCard({ data, delay = 0 }: WeatherCardProps): React.ReactElement {
+export function WeatherCard({ data, delay = 0, noGridSpan = false }: WeatherCardProps): React.ReactElement {
   const aqiColor = data.aqi <= 50 ? '#10b981' : data.aqi <= 100 ? '#f59e0b' : '#ef4444';
 
   return (
-    <Card delay={delay}>
+    <Card delay={delay} noGridSpan={noGridSpan}>
       <CardHeader icon="◐" title="Weather" />
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
         <span style={{ fontSize: 56, lineHeight: 1 }}>{data.icon}</span>
