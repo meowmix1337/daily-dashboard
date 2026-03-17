@@ -11,8 +11,14 @@ function loadOrder(): CardId[] {
     if (!raw) return DEFAULT_ORDER;
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return DEFAULT_ORDER;
-    // Validate all entries are known card IDs and all defaults are present
-    const valid = parsed.filter((id): id is CardId => DEFAULT_ORDER.includes(id as CardId));
+    // Validate all entries are known card IDs, deduplicate, and append any new cards
+    const seen = new Set<CardId>();
+    const valid = parsed.filter((id): id is CardId => {
+      if (!DEFAULT_ORDER.includes(id as CardId)) return false;
+      if (seen.has(id as CardId)) return false;
+      seen.add(id as CardId);
+      return true;
+    });
     // Append any new cards not in persisted order (future-proofing)
     const missing = DEFAULT_ORDER.filter(id => !valid.includes(id));
     return [...valid, ...missing];

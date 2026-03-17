@@ -1,19 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
+  type DragEndEvent,
   closestCenter,
-  DraggableAttributes,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
+  sortableKeyboardCoordinates,
   useSortable,
-  SyntheticListenerMap,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDashboard } from '../hooks/useDashboard';
@@ -21,7 +24,7 @@ import { useClock } from '../hooks/useClock';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useWindowSize } from '../hooks/useWindowSize';
-import { useCardOrder, CardId } from '../hooks/useCardOrder';
+import { useCardOrder, type CardId } from '../hooks/useCardOrder';
 import { WeatherCard } from './WeatherCard';
 import { CalendarCard } from './CalendarCard';
 import { TasksCard } from './TasksCard';
@@ -89,9 +92,9 @@ function CardSkeleton({ span = 1, rows = 3 }: { span?: number; rows?: number }):
   );
 }
 
-// Drag handle button — subtle braille dots icon, visible on hover
+// Drag handle button — 6-dot SVG grid icon, visible on hover
 interface DragHandleProps {
-  listeners: SyntheticListenerMap | undefined;
+  listeners: DraggableSyntheticListeners | undefined;
   attributes: DraggableAttributes;
 }
 
@@ -106,8 +109,8 @@ function DragHandle({ listeners, attributes }: DragHandleProps): React.ReactElem
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: 8,
+        left: 12,
         width: 24,
         height: 24,
         display: 'flex',
@@ -117,17 +120,22 @@ function DragHandle({ listeners, attributes }: DragHandleProps): React.ReactElem
         border: 'none',
         borderRadius: 4,
         cursor: 'grab',
-        color: hovered ? 'var(--text-secondary)' : 'var(--text-muted)',
-        opacity: hovered ? 1 : 0.35,
-        fontSize: 14,
-        lineHeight: 1,
+        color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
+        opacity: hovered ? 1 : 0.55,
         transition: 'opacity 0.2s ease, color 0.2s ease',
         userSelect: 'none',
         touchAction: 'none',
         zIndex: 2,
       }}
     >
-      ⠿
+      <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden>
+        <circle cx="2" cy="2" r="1.5" />
+        <circle cx="2" cy="7" r="1.5" />
+        <circle cx="2" cy="12" r="1.5" />
+        <circle cx="8" cy="2" r="1.5" />
+        <circle cx="8" cy="7" r="1.5" />
+        <circle cx="8" cy="12" r="1.5" />
+      </svg>
     </button>
   );
 }
@@ -147,6 +155,7 @@ function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): 
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id });
 
   const transformStyle = CSS.Transform.toString(transform);
@@ -158,9 +167,18 @@ function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): 
         gridColumn: `span ${span}`,
         position: 'relative',
         transform: transformStyle ?? undefined,
-        transition,
+        // Combine dnd-kit transition with drop-target transitions
+        transition: [transition, 'border 0.15s ease', 'background 0.15s ease'].filter(Boolean).join(', '),
         zIndex: isDragging ? 10 : undefined,
-        opacity: isDragging ? 0.8 : 1,
+        // Lift effect: scale + deep shadow instead of opacity fade
+        scale: isDragging ? '1.02' : undefined,
+        boxShadow: isDragging
+          ? '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.3)'
+          : undefined,
+        // Drop target highlight
+        borderRadius: 16,
+        border: isOver && !isDragging ? '1px solid rgba(99,102,241,0.5)' : '1px solid transparent',
+        background: isOver && !isDragging ? 'rgba(99,102,241,0.06)' : 'transparent',
       }}
     >
       <DragHandle listeners={listeners} attributes={attributes} />
@@ -196,21 +214,21 @@ export default function Dashboard(): React.ReactElement {
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   function handleDragEnd(event: DragEndEvent): void {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = cardOrder.indexOf(active.id as CardId);
-      const newIndex = cardOrder.indexOf(over.id as CardId);
-      setCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
-    }
+    if (!over || active.id === over.id) return;
+    const oldIndex = cardOrder.indexOf(active.id as CardId);
+    const newIndex = cardOrder.indexOf(over.id as CardId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    setCardOrder(arrayMove(cardOrder, oldIndex, newIndex));
   }
 
-  function renderCard(id: CardId): React.ReactNode {
+  const renderCard = useCallback(function renderCard(id: CardId): React.ReactNode {
     switch (id) {
       case 'weather':
         return data?.weather ? (
@@ -241,7 +259,7 @@ export default function Dashboard(): React.ReactElement {
       default:
         return null;
     }
-  }
+  }, [data, isMobile, isTablet]);
 
   return (
     <div style={{
