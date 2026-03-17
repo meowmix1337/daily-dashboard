@@ -110,23 +110,34 @@ function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): 
 
   const [gripHovered, setGripHovered] = useState(false);
 
-  // Ghost slot: card stays in the grid as a dashed placeholder while
-  // the DragOverlay shows the floating lifted card.
+  // FROM location: invisible slot — card is floating via DragOverlay, source just holds space
   if (isDragging) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{ gridColumn: `span ${span}`, borderRadius: 16 }}
+      >
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>{children}</div>
+      </div>
+    );
+  }
+
+  // TO location: dashed ghost slot — shows exactly where the dragged card will land
+  if (isOver) {
     return (
       <div
         ref={setNodeRef}
         style={{
           gridColumn: `span ${span}`,
+          transform: CSS.Transform.toString(transform) ?? undefined,
+          transition,
           borderRadius: 16,
-          border: '2px dashed rgba(99,102,241,0.35)',
-          background: 'rgba(99,102,241,0.04)',
+          border: '2px dashed rgba(99,102,241,0.55)',
+          background: 'rgba(99,102,241,0.07)',
+          boxShadow: '0 0 0 4px rgba(99,102,241,0.12)',
         }}
       >
-        {/* Hidden children preserve the slot's natural height */}
-        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>
-          {children}
-        </div>
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>{children}</div>
       </div>
     );
   }
@@ -138,13 +149,8 @@ function SortableCardWrapper({ id, span, children }: SortableCardWrapperProps): 
         gridColumn: `span ${span}`,
         position: 'relative',
         transform: CSS.Transform.toString(transform) ?? undefined,
-        transition: [transition, 'border 0.15s ease', 'background 0.15s ease', 'box-shadow 0.15s ease']
-          .filter(Boolean).join(', '),
+        transition,
         borderRadius: 16,
-        // Drop destination highlight
-        border: isOver ? '2px solid rgba(99,102,241,0.55)' : '2px solid transparent',
-        background: isOver ? 'rgba(99,102,241,0.07)' : 'transparent',
-        boxShadow: isOver ? '0 0 0 4px rgba(99,102,241,0.12)' : undefined,
       }}
     >
       {/* Centered pill grip — large hit area, subtle pill visual that grows on hover */}
