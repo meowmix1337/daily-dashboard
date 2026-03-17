@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -66,7 +65,7 @@ func (s *QuotesService) fetchFromAPI(ctx context.Context) (model.Quote, error) {
 		return model.Quote{}, fmt.Errorf("API Ninjas quotes returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp.Body)
 	if err != nil {
 		return model.Quote{}, err
 	}

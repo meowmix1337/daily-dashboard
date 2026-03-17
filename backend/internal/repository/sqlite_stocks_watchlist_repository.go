@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -65,7 +66,7 @@ func (r *SQLiteStocksWatchlistRepository) Get(ctx context.Context, userID string
 		userID, symbol,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return WatchlistRow{}, sql.ErrNoRows
 		}
 		return WatchlistRow{}, fmt.Errorf("get watchlist symbol: %w", err)
