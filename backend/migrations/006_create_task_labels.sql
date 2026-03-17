@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS task_labels (
     id CHAR(36) NOT NULL PRIMARY KEY CHECK(length(id) = 36),
     user_id CHAR(36) NOT NULL REFERENCES users(id),
-    name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+    name VARCHAR(16) NOT NULL CHECK(length(trim(name)) > 0 AND length(name) <= 16),
     color TEXT NOT NULL DEFAULT '#6366f1',
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
