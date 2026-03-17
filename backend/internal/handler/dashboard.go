@@ -50,6 +50,10 @@ func (h *DashboardHandler) AddRoutes(r chi.Router) {
 // If any individual service fails, that field is left nil/empty.
 func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	// Each goroutine below writes to a distinct field of resp (Weather, Stocks,
+	// Calendar, Tasks, Meta). g.Wait() provides the happens-before guarantee
+	// needed for the final read of resp after all goroutines complete, so no
+	// mutex is required.
 	var resp model.DashboardResponse
 
 	g, gctx := errgroup.WithContext(ctx)

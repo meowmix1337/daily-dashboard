@@ -45,7 +45,7 @@ func (s *Server) setupRoutes() {
 
 	// Global middleware
 	r.Use(chimiddleware.Recoverer)
-	r.Use(middleware.CORS)
+	r.Use(middleware.CORS(s.cfg.CORSOrigin))
 	r.Use(middleware.Logging)
 
 	// Shared dependencies
