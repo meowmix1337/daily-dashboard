@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -71,7 +70,7 @@ func (s *CalendarService) fetchAndParse(ctx context.Context) ([]model.CalendarEv
 		return nil, fmt.Errorf("calendar: ICS server returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readBody(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("calendar: read body: %w", err)
 	}

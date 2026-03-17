@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -128,7 +127,7 @@ func (s *StocksService) SearchSymbols(ctx context.Context, query string) ([]mode
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB max
+	body, err := readBody(resp.Body) // 1 MB max
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +197,7 @@ func (s *StocksService) fetchFromAPIs(ctx context.Context, userID string) ([]mod
 }
 
 func (s *StocksService) fetchFinnhub(ctx context.Context, symbol string) (model.StockQuote, error) {
-	u := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s", symbol)
+	u := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s", url.QueryEscape(symbol))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -212,7 +211,7 @@ func (s *StocksService) fetchFinnhub(ctx context.Context, symbol string) (model.
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB max
+	body, err := readBody(resp.Body) // 1 MB max
 	if err != nil {
 		return model.StockQuote{}, err
 	}
@@ -244,7 +243,7 @@ func (s *StocksService) fetchBTC(ctx context.Context) (model.StockQuote, error) 
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1 MB max
+	body, err := readBody(resp.Body) // 1 MB max
 	if err != nil {
 		return model.StockQuote{}, err
 	}
