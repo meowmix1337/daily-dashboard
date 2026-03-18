@@ -33,6 +33,7 @@ import { StocksCard } from './StocksCard';
 import { QuoteCard } from './QuoteCard';
 import { UserProfile } from './UserProfile';
 import { UnavailableCard } from './ui/UnavailableCard';
+import { SettingsModal } from './SettingsModal';
 
 function getGreeting(date: Date): string {
   const h = date.getHours();
@@ -218,6 +219,7 @@ export default function Dashboard(): React.ReactElement {
   const [toggleHovered, setToggleHovered] = useState(false);
   const [cardOrder, setCardOrder] = useCardOrder();
   const [activeId, setActiveId] = useState<CardId | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
@@ -400,6 +402,24 @@ export default function Dashboard(): React.ReactElement {
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              title="Settings"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 10,
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: 16,
+                color: 'var(--text-secondary)',
+                flexShrink: 0,
+              }}
+            >⚙</button>
             {user && <UserProfile user={user} />}
           </div>
         </div>
@@ -500,6 +520,8 @@ export default function Dashboard(): React.ReactElement {
           </div>
         </div>
       </div>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

@@ -77,6 +77,24 @@ export interface DashboardResponse {
   meta: MetaData | null;
 }
 
+export interface UserSettings {
+  latitude: number | null;
+  longitude: number | null;
+  calendar_ics_url: string | null;
+  timezone: string | null;
+}
+
+export interface NewsCategoryType {
+  id: string;
+  label: string;
+  sort_order: number;
+}
+
+export interface NewsCategoriesResponse {
+  available: NewsCategoryType[];
+  selected: NewsCategoryType[];
+}
+
 export interface TaskLabel {
   id: string;
   name: string;
