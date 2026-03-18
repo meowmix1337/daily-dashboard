@@ -1,4 +1,4 @@
-import type { DashboardResponse, NewsCategory, Task, StockQuote, SymbolSearchResult, UserSettings, NewsCategoriesResponse } from '../types/dashboard';
+import type { DashboardResponse, NewsCategory, Task, StockQuote, SymbolSearchResult, TaskLabel, UserSettings, NewsCategoriesResponse } from '../types/dashboard';
 
 const BASE = '/api';
 
@@ -76,4 +76,25 @@ export function fetchNewsCategories(): Promise<NewsCategoriesResponse> {
 
 export function setNewsCategories(categoryIds: string[]): Promise<void> {
   return apiFetch('/settings/news-categories', { method: 'PUT', body: JSON.stringify({ category_ids: categoryIds }) }).then(() => undefined);
+
+export function fetchLabels(): Promise<TaskLabel[]> {
+  return apiFetch<TaskLabel[]>('/labels');
+}
+export function createLabel(name: string, color: string): Promise<TaskLabel> {
+  return apiFetch<TaskLabel>('/labels', { method: 'POST', body: JSON.stringify({ name, color }) });
+}
+export function updateLabel(id: string, name?: string, color?: string): Promise<TaskLabel> {
+  return apiFetch<TaskLabel>(`/labels/${id}`, { method: 'PATCH', body: JSON.stringify({ name, color }) });
+}
+export function deleteLabel(id: string): Promise<void> {
+  return apiFetch(`/labels/${id}`, { method: 'DELETE' }).then(() => undefined);
+}
+export function fetchTaskLabels(taskId: string): Promise<TaskLabel[]> {
+  return apiFetch<TaskLabel[]>(`/tasks/${encodeURIComponent(taskId)}/labels`);
+}
+export function assignLabelToTask(taskId: string, labelId: string): Promise<void> {
+  return apiFetch(`/tasks/${encodeURIComponent(taskId)}/labels`, { method: 'POST', body: JSON.stringify({ label_id: labelId }) }).then(() => undefined);
+}
+export function removeLabelFromTask(taskId: string, labelId: string): Promise<void> {
+  return apiFetch(`/tasks/${encodeURIComponent(taskId)}/labels/${encodeURIComponent(labelId)}`, { method: 'DELETE' }).then(() => undefined);
 }

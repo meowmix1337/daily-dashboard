@@ -94,3 +94,10 @@ export interface NewsCategoriesResponse {
   available: NewsCategoryType[];
   selected: NewsCategoryType[];
 }
+
+export interface TaskLabel {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
