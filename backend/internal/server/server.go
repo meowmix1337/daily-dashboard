@@ -63,6 +63,8 @@ func (s *Server) setupRoutes() {
 	tasksSvc := service.NewTasksService(taskRepo)
 	settingsRepo := repository.NewSQLiteUserSettingsRepository(s.db)
 	settingsSvc := service.NewUserSettingsService(settingsRepo)
+	labelRepo := repository.NewSQLiteTaskLabelsRepository(s.db)
+	labelsSvc := service.NewTaskLabelsService(labelRepo)
 	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
 	quotesSvc := service.NewQuotesService(httpClient, s.cfg.APINinjasAPIKey, cache)
 
@@ -79,6 +81,7 @@ func (s *Server) setupRoutes() {
 	calendarH := handler.NewCalendarHandler(calendarSvc)
 	tasksH := handler.NewTasksHandler(tasksSvc, validate)
 	settingsH := handler.NewUserSettingsHandler(settingsSvc, validate)
+	labelsH := handler.NewTaskLabelsHandler(labelsSvc, validate)
 	metaH := handler.NewMetaHandler(sunriseSvc, quotesSvc)
 	dashboardH := handler.NewDashboardHandler(
 		weatherSvc,
@@ -109,5 +112,6 @@ func (s *Server) setupRoutes() {
 		metaH.AddRoutes(r)
 		tasksH.AddRoutes(r)
 		settingsH.AddRoutes(r)
+		labelsH.AddRoutes(r)
 	})
 }
