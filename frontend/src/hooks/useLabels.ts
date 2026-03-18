@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   assignLabelToTask,
@@ -22,15 +23,18 @@ export function useTaskLabels(taskIds: string[]): Map<string, TaskLabel[]> {
     queries: taskIds.map((id) => ({
       queryKey: ['task-labels', id],
       queryFn: () => fetchTaskLabels(id),
+      staleTime: 30_000,
     })),
   });
 
-  const map = new Map<string, TaskLabel[]>();
-  taskIds.forEach((id, i) => {
-    const result = results[i];
-    map.set(id, result?.data ?? []);
-  });
-  return map;
+  return useMemo(() => {
+    const map = new Map<string, TaskLabel[]>();
+    taskIds.forEach((id, i) => {
+      const result = results[i];
+      map.set(id, result?.data ?? []);
+    });
+    return map;
+  }, [taskIds, results]);
 }
 
 export function useLabelMutations() {

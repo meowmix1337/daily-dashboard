@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Task } from '../types/dashboard';
 import { Card } from './ui/Card';
 import { CardHeader } from './ui/CardHeader';
@@ -9,6 +9,10 @@ interface TasksCardProps {
   tasks: Task[];
   delay?: number;
   noGridSpan?: boolean;
+}
+
+function sanitizeColor(c: string): string {
+  return /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '#6366f1';
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -34,7 +38,7 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
   const { toggle, create, remove } = useTasks();
   const { labels } = useLabels();
   const { createLabel, deleteLabel, assignLabel, removeLabel } = useLabelMutations();
-  const taskIds = tasks.map((t) => t.id);
+  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
   const taskLabelsMap = useTaskLabels(taskIds);
 
   const [newText, setNewText] = useState('');
@@ -131,9 +135,9 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                 key={label.id}
                 onClick={() => setActiveFilterLabel(isActive ? null : label.id)}
                 style={{
-                  background: isActive ? `${label.color}44` : `${label.color}22`,
-                  border: isActive ? `1px solid ${label.color}` : `1px solid ${label.color}66`,
-                  color: label.color,
+                  background: isActive ? `${sanitizeColor(label.color)}44` : `${sanitizeColor(label.color)}22`,
+                  border: isActive ? `1px solid ${sanitizeColor(label.color)}` : `1px solid ${sanitizeColor(label.color)}66`,
+                  color: sanitizeColor(label.color),
                   borderRadius: 999,
                   padding: '2px 9px',
                   fontSize: 11,
@@ -220,9 +224,9 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                         onClick={() => removeLabel.mutate({ taskId: task.id, labelId: label.id })}
                         title="Remove label"
                         style={{
-                          background: `${label.color}22`,
-                          border: `1px solid ${label.color}66`,
-                          color: label.color,
+                          background: `${sanitizeColor(label.color)}22`,
+                          border: `1px solid ${sanitizeColor(label.color)}66`,
+                          color: sanitizeColor(label.color),
                           borderRadius: 999,
                           padding: '1px 7px',
                           fontSize: 10,
@@ -320,7 +324,7 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                             width: 10,
                             height: 10,
                             borderRadius: '50%',
-                            background: label.color,
+                            background: sanitizeColor(label.color),
                             flexShrink: 0,
                           }} />
                           <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)' }}>
@@ -462,13 +466,13 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      background: `${label.color}22`,
-                      border: `1px solid ${label.color}66`,
+                      background: `${sanitizeColor(label.color)}22`,
+                      border: `1px solid ${sanitizeColor(label.color)}66`,
                       borderRadius: 999,
                       padding: '2px 6px 2px 9px',
                     }}
                   >
-                    <span style={{ fontSize: 11, fontWeight: 600, color: label.color }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: sanitizeColor(label.color) }}>
                       {label.name}
                     </span>
                     <button
@@ -480,7 +484,7 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                         cursor: 'pointer',
                         fontSize: 12,
                         lineHeight: 1,
-                        color: label.color,
+                        color: sanitizeColor(label.color),
                         padding: 0,
                         opacity: 0.6,
                       }}
