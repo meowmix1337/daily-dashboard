@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Task } from '../types/dashboard';
 import { Card } from './ui/Card';
 import { CardHeader } from './ui/CardHeader';
 import { useTasks } from '../hooks/useTasks';
+import { useLabels, useLabelMutations, useTaskLabels } from '../hooks/useLabels';
 
 interface TasksCardProps {
   tasks: Task[];
@@ -18,12 +19,46 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 const PRIORITY_CYCLE: Task['priority'][] = ['high', 'medium', 'low'];
 
+const COLOR_PRESETS = [
+  '#6366f1',
+  '#ec4899',
+  '#f59e0b',
+  '#10b981',
+  '#3b82f6',
+  '#ef4444',
+  '#8b5cf6',
+  '#06b6d4',
+];
+
 export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
   const { toggle, create, remove } = useTasks();
+  const { labels } = useLabels();
+  const { createLabel, deleteLabel, assignLabel, removeLabel } = useLabelMutations();
+  const taskIds = tasks.map((t) => t.id);
+  const taskLabelsMap = useTaskLabels(taskIds);
+
   const [newText, setNewText] = useState('');
   const [newPriority, setNewPriority] = useState<Task['priority']>('medium');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const doneCount = tasks.filter((t) => t.done).length;
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [activeFilterLabel, setActiveFilterLabel] = useState<string | null>(null);
+  const [labelPickerTaskId, setLabelPickerTaskId] = useState<string | null>(null);
+  const [showLabelManager, setShowLabelManager] = useState(false);
+  const [newLabelName, setNewLabelName] = useState('');
+  const [newLabelColor, setNewLabelColor] = useState('#6366f1');
+
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close label picker on outside click
+  useEffect(() => {
+    if (!labelPickerTaskId) return;
+    function handleClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setLabelPickerTaskId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [labelPickerTaskId]);
 
   function cyclePriority() {
     const idx = PRIORITY_CYCLE.indexOf(newPriority);
@@ -37,6 +72,23 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
     setNewText('');
   }
 
+  function handleAddLabel() {
+    const name = newLabelName.trim();
+    if (!name) return;
+    createLabel.mutate({ name, color: newLabelColor });
+    setNewLabelName('');
+  }
+
+  // Filter tasks by active label
+  const visibleTasks = activeFilterLabel
+    ? tasks.filter((t) => {
+        const tLabels = taskLabelsMap.get(t.id) ?? [];
+        return tLabels.some((l) => l.id === activeFilterLabel);
+      })
+    : tasks;
+
+  const doneCount = tasks.filter((t) => t.done).length;
+
   return (
     <Card delay={delay} noGridSpan={noGridSpan}>
       <CardHeader
@@ -44,92 +96,268 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
         title="Tasks"
         badge={`${doneCount}/${tasks.length} done`}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            onMouseEnter={() => setHoveredId(task.id)}
-            onMouseLeave={() => setHoveredId(null)}
+
+      {/* Label filter bar */}
+      {labels.length > 0 && (
+        <div style={{
+          display: 'flex',
+          gap: 6,
+          overflowX: 'auto',
+          marginBottom: 10,
+          paddingBottom: 2,
+          scrollbarWidth: 'none',
+        }}>
+          {/* "All" chip */}
+          <button
+            onClick={() => setActiveFilterLabel(null)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 12px',
-              borderRadius: 10,
-              background: task.done
-                ? 'rgba(16,185,129,0.05)'
-                : 'var(--bg-card)',
-              transition: 'all 0.2s',
+              background: activeFilterLabel === null ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)',
+              border: activeFilterLabel === null ? '1px solid #6366f1' : '1px solid rgba(99,102,241,0.3)',
+              color: '#6366f1',
+              borderRadius: 999,
+              padding: '2px 9px',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}
           >
-            {/* Checkbox */}
+            All
+          </button>
+          {labels.map((label) => {
+            const isActive = activeFilterLabel === label.id;
+            return (
+              <button
+                key={label.id}
+                onClick={() => setActiveFilterLabel(isActive ? null : label.id)}
+                style={{
+                  background: isActive ? `${label.color}44` : `${label.color}22`,
+                  border: isActive ? `1px solid ${label.color}` : `1px solid ${label.color}66`,
+                  color: label.color,
+                  borderRadius: 999,
+                  padding: '2px 9px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {label.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Task list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {visibleTasks.map((task) => {
+          const tLabels = taskLabelsMap.get(task.id) ?? [];
+          const isPickerOpen = labelPickerTaskId === task.id;
+
+          return (
             <div
-              onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
+              key={task.id}
+              onMouseEnter={() => setHoveredTaskId(task.id)}
+              onMouseLeave={() => setHoveredTaskId(null)}
               style={{
-                width: 20,
-                height: 20,
-                borderRadius: 6,
-                flexShrink: 0,
-                border: task.done ? '2px solid #10b981' : '2px solid var(--border-medium)',
-                background: task.done ? '#10b981' : 'transparent',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
+                alignItems: 'flex-start',
+                gap: 12,
+                padding: '10px 12px',
+                borderRadius: 10,
+                background: task.done
+                  ? 'rgba(16,185,129,0.05)'
+                  : 'var(--bg-card)',
                 transition: 'all 0.2s',
-                fontSize: 12,
-                color: 'var(--bg-primary)',
+                position: 'relative',
               }}
             >
-              {task.done && '✓'}
-            </div>
+              {/* Checkbox */}
+              <div
+                onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 6,
+                  flexShrink: 0,
+                  border: task.done ? '2px solid #10b981' : '2px solid var(--border-medium)',
+                  background: task.done ? '#10b981' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: 12,
+                  color: 'var(--bg-primary)',
+                  marginTop: 1,
+                }}
+              >
+                {task.done && '✓'}
+              </div>
 
-            {/* Text */}
-            <div
-              onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
-              style={{
-                flex: 1,
-                fontSize: 13,
-                color: task.done ? 'var(--text-muted)' : 'var(--text-primary)',
-                textDecoration: task.done ? 'line-through' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
-              {task.text}
-            </div>
+              {/* Text + labels */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  onClick={() => toggle.mutate({ id: task.id, done: !task.done })}
+                  style={{
+                    fontSize: 13,
+                    color: task.done ? 'var(--text-muted)' : 'var(--text-primary)',
+                    textDecoration: task.done ? 'line-through' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {task.text}
+                </div>
 
-            {/* Priority dot */}
-            <div style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              flexShrink: 0,
-              background: PRIORITY_COLOR[task.priority] ?? 'var(--text-secondary)',
-              opacity: task.done ? 0.3 : 1,
-            }} />
+                {/* Label chips on task */}
+                {tLabels.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                    {tLabels.map((label) => (
+                      <button
+                        key={label.id}
+                        onClick={() => removeLabel.mutate({ taskId: task.id, labelId: label.id })}
+                        title="Remove label"
+                        style={{
+                          background: `${label.color}22`,
+                          border: `1px solid ${label.color}66`,
+                          color: label.color,
+                          borderRadius: 999,
+                          padding: '1px 7px',
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {label.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {/* Delete button */}
-            <button
-              onClick={() => remove.mutate(task.id)}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '0 2px',
-                cursor: 'pointer',
-                fontSize: 14,
-                lineHeight: 1,
-                color: 'var(--text-secondary)',
-                opacity: hoveredId === task.id ? 0.7 : 0,
-                transition: 'opacity 0.15s',
+              {/* Priority dot */}
+              <div style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
                 flexShrink: 0,
-              }}
-              title="Delete task"
-            >
-              ×
-            </button>
-          </div>
-        ))}
+                background: PRIORITY_COLOR[task.priority] ?? 'var(--text-secondary)',
+                opacity: task.done ? 0.3 : 1,
+                marginTop: 7,
+              }} />
+
+              {/* Label picker button */}
+              <div style={{ position: 'relative', flexShrink: 0 }} ref={isPickerOpen ? pickerRef : undefined}>
+                <button
+                  onClick={() => setLabelPickerTaskId(isPickerOpen ? null : task.id)}
+                  title="Assign label"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 2px',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    lineHeight: 1,
+                    color: 'var(--text-secondary)',
+                    opacity: hoveredTaskId === task.id || isPickerOpen ? 0.7 : 0,
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  🏷
+                </button>
+
+                {/* Label picker dropdown */}
+                {isPickerOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    zIndex: 100,
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 10,
+                    padding: 8,
+                    minWidth: 160,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                  }}>
+                    {labels.length === 0 && (
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '2px 4px' }}>
+                        No labels yet
+                      </div>
+                    )}
+                    {labels.map((label) => {
+                      const assigned = tLabels.some((l) => l.id === label.id);
+                      return (
+                        <button
+                          key={label.id}
+                          onClick={() => {
+                            if (assigned) {
+                              removeLabel.mutate({ taskId: task.id, labelId: label.id });
+                            } else {
+                              assignLabel.mutate({ taskId: task.id, labelId: label.id });
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px 6px',
+                            borderRadius: 6,
+                            textAlign: 'left',
+                            width: '100%',
+                          }}
+                        >
+                          <span style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: '50%',
+                            background: label.color,
+                            flexShrink: 0,
+                          }} />
+                          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)' }}>
+                            {label.name}
+                          </span>
+                          {assigned && (
+                            <span style={{ fontSize: 11, color: '#10b981' }}>✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Delete button */}
+              <button
+                onClick={() => remove.mutate(task.id)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: '0 2px',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  lineHeight: 1,
+                  color: 'var(--text-secondary)',
+                  opacity: hoveredTaskId === task.id ? 0.7 : 0,
+                  transition: 'opacity 0.15s',
+                  flexShrink: 0,
+                }}
+                title="Delete task"
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Add task form */}
@@ -192,6 +420,136 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
           >
             Add
           </button>
+        )}
+      </div>
+
+      {/* Label manager section */}
+      <div style={{ marginTop: 12 }}>
+        <button
+          onClick={() => setShowLabelManager((v) => !v)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 11,
+            color: 'var(--text-muted)',
+            padding: '2px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          <span style={{ fontSize: 10, transform: showLabelManager ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
+          Labels {labels.length > 0 ? `(${labels.length})` : ''}
+        </button>
+
+        {showLabelManager && (
+          <div style={{
+            marginTop: 8,
+            paddingTop: 8,
+            borderTop: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}>
+            {/* Existing labels */}
+            {labels.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {labels.map((label) => (
+                  <div
+                    key={label.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: `${label.color}22`,
+                      border: `1px solid ${label.color}66`,
+                      borderRadius: 999,
+                      padding: '2px 6px 2px 9px',
+                    }}
+                  >
+                    <span style={{ fontSize: 11, fontWeight: 600, color: label.color }}>
+                      {label.name}
+                    </span>
+                    <button
+                      onClick={() => deleteLabel.mutate(label.id)}
+                      title="Delete label"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        lineHeight: 1,
+                        color: label.color,
+                        padding: 0,
+                        opacity: 0.6,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Create new label */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <input
+                type="text"
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value.slice(0, 16))}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddLabel()}
+                placeholder="Label name..."
+                maxLength={16}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: 12,
+                  color: 'var(--text-primary)',
+                  caretColor: 'var(--text-accent)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  paddingBottom: 4,
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {COLOR_PRESETS.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setNewLabelColor(color)}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: color,
+                      border: newLabelColor === color ? '2px solid var(--text-primary)' : '2px solid transparent',
+                      cursor: 'pointer',
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                  />
+                ))}
+                {newLabelName.trim() && (
+                  <button
+                    onClick={handleAddLabel}
+                    style={{
+                      marginLeft: 'auto',
+                      background: 'rgba(99,102,241,0.15)',
+                      border: '1px solid rgba(99,102,241,0.3)',
+                      borderRadius: 6,
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      color: 'var(--text-accent)',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
+                    Add
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Card>

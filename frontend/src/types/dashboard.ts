@@ -76,3 +76,10 @@ export interface DashboardResponse {
   stocks: StockQuote[] | null;
   meta: MetaData | null;
 }
+
+export interface TaskLabel {
+  id: string;
+  name: string;
+  color: string;
+  created_at: string;
+}
