@@ -1,4 +1,4 @@
-import type { DashboardResponse, NewsCategory, Task, StockQuote, SymbolSearchResult } from '../types/dashboard';
+import type { DashboardResponse, NewsCategory, Task, StockQuote, SymbolSearchResult, UserSettings, NewsCategoriesResponse } from '../types/dashboard';
 
 const BASE = '/api';
 
@@ -60,4 +60,20 @@ export function searchSymbols(query: string): Promise<{ results: SymbolSearchRes
 
 export function deleteTask(id: string): Promise<void> {
   return apiFetch(`/tasks/${id}`, { method: 'DELETE' }).then(() => undefined);
+}
+
+export function fetchUserSettings(): Promise<UserSettings> {
+  return apiFetch<UserSettings>('/settings');
+}
+
+export function upsertUserSettings(settings: Partial<UserSettings>): Promise<UserSettings> {
+  return apiFetch<UserSettings>('/settings', { method: 'PUT', body: JSON.stringify(settings) });
+}
+
+export function fetchNewsCategories(): Promise<NewsCategoriesResponse> {
+  return apiFetch<NewsCategoriesResponse>('/settings/news-categories');
+}
+
+export function setNewsCategories(categoryIds: string[]): Promise<void> {
+  return apiFetch('/settings/news-categories', { method: 'PUT', body: JSON.stringify({ category_ids: categoryIds }) }).then(() => undefined);
 }
