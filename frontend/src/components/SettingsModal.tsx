@@ -16,6 +16,7 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
   const [calendarIcsUrl, setCalendarIcsUrl] = useState<string>('');
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showIcsUrl, setShowIcsUrl] = useState(false);
 
   useEffect(() => {
     if (settings) {
@@ -38,7 +39,7 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
     );
   }
 
-  function handleSave(): void {
+  async function handleSave(): Promise<void> {
     const body: {
       latitude?: number | null;
       longitude?: number | null;
@@ -50,8 +51,14 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
       timezone: timezone !== '' ? timezone : null,
       calendar_ics_url: calendarIcsUrl !== '' ? calendarIcsUrl : null,
     };
-    save.mutate(body);
-    saveCategories.mutate(selectedCategoryIds);
+    try {
+      await Promise.all([
+        save.mutateAsync(body),
+        saveCategories.mutateAsync(selectedCategoryIds),
+      ]);
+    } catch {
+      // mutations handle their own error state via TanStack Query
+    }
     onClose();
   }
 
@@ -195,15 +202,37 @@ export function SettingsModal({ onClose }: SettingsModalProps): React.ReactEleme
         {/* Section: Calendar ICS URL */}
         <div>
           <div style={sectionLabelStyle}>Calendar ICS URL</div>
-          <input
-            type="url"
-            value={calendarIcsUrl}
-            onChange={(e) => setCalendarIcsUrl(e.target.value)}
-            onFocus={() => setFocusedField('calendarIcsUrl')}
-            onBlur={() => setFocusedField(null)}
-            style={inputStyle('calendarIcsUrl')}
-            placeholder="https://..."
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showIcsUrl ? 'url' : 'password'}
+              value={calendarIcsUrl}
+              onChange={(e) => setCalendarIcsUrl(e.target.value)}
+              onFocus={() => setFocusedField('calendarIcsUrl')}
+              onBlur={() => setFocusedField(null)}
+              style={{ ...inputStyle('calendarIcsUrl'), paddingRight: 40 }}
+              placeholder="https://..."
+            />
+            <button
+              type="button"
+              onClick={() => setShowIcsUrl((v) => !v)}
+              aria-label={showIcsUrl ? 'Hide URL' : 'Show URL'}
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                fontSize: 12,
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              {showIcsUrl ? '🙈' : '👁'}
+            </button>
+          </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
             Your private Google/Outlook calendar feed URL
           </div>

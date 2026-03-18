@@ -30,6 +30,7 @@ export function useSettingsMutations() {
     mutationFn: (body: Partial<UserSettings>) => upsertUserSettings(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -37,6 +38,7 @@ export function useSettingsMutations() {
     mutationFn: (categoryIds: string[]) => setNewsCategories(categoryIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['news-categories'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
