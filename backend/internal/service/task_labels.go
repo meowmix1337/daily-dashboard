@@ -173,6 +173,9 @@ func (s *TaskLabelsService) AssignLabel(ctx context.Context, taskID string, labe
 		TaskID:  taskID,
 		LabelID: labelID,
 	}); err != nil {
+		if errors.Is(err, repository.ErrLabelAlreadyAssigned) {
+			return ErrLabelAlreadyAssigned
+		}
 		return fmt.Errorf("assign label: %w", err)
 	}
 	return nil

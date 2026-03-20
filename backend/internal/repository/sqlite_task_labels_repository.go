@@ -175,6 +175,9 @@ func (r *SQLiteTaskLabelsRepository) AssignLabel(ctx context.Context, a TaskLabe
 		a.ID, a.TaskID, a.LabelID, now, now,
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrLabelAlreadyAssigned
+		}
 		return fmt.Errorf("assign label: %w", err)
 	}
 	return nil
