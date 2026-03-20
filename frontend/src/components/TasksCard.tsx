@@ -49,6 +49,7 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
   const [showLabelManager, setShowLabelManager] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState('#6366f1');
+  const [hoveredLabelId, setHoveredLabelId] = useState<string | null>(null);
 
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -307,17 +308,22 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                               assignLabel.mutate({ taskId: task.id, labelId: label.id });
                             }
                           }}
+                          onMouseEnter={() => setHoveredLabelId(label.id)}
+                          onMouseLeave={() => setHoveredLabelId(null)}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 8,
-                            background: 'none',
+                            background: hoveredLabelId === label.id
+                              ? `${sanitizeColor(label.color)}22`
+                              : 'none',
                             border: 'none',
                             cursor: 'pointer',
                             padding: '4px 6px',
                             borderRadius: 6,
                             textAlign: 'left',
                             width: '100%',
+                            transition: 'background 0.12s',
                           }}
                         >
                           <span style={{
