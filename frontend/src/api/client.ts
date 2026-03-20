@@ -12,6 +12,9 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${res.statusText}`);
   }
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -76,7 +79,7 @@ export function fetchNewsCategories(): Promise<NewsCategoriesResponse> {
 
 export function setNewsCategories(categoryIds: string[]): Promise<void> {
   return apiFetch('/settings/news-categories', { method: 'PUT', body: JSON.stringify({ category_ids: categoryIds }) }).then(() => undefined);
-
+}
 export function fetchLabels(): Promise<TaskLabel[]> {
   return apiFetch<TaskLabel[]>('/labels');
 }
