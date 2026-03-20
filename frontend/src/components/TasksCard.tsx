@@ -175,6 +175,7 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
                   : 'var(--bg-card)',
                 transition: 'all 0.2s',
                 position: 'relative',
+                zIndex: isPickerOpen ? 1 : undefined,
               }}
             >
               {/* Checkbox */}
@@ -275,7 +276,9 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
 
                 {/* Label picker dropdown */}
                 {isPickerOpen && (
-                  <div style={{
+                  <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    style={{
                     position: 'absolute',
                     right: 0,
                     top: '100%',

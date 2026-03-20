@@ -87,6 +87,23 @@ export function useLabelMutations() {
   const assignLabel = useMutation({
     mutationFn: ({ taskId, labelId }: { taskId: string; labelId: string }) =>
       assignLabelToTask(taskId, labelId),
+    onMutate: async ({ taskId, labelId }) => {
+      await queryClient.cancelQueries({ queryKey: ['task-labels', taskId] });
+      const previous = queryClient.getQueryData<TaskLabel[]>(['task-labels', taskId]);
+      const allLabels = queryClient.getQueryData<TaskLabel[]>(['labels']) ?? [];
+      const label = allLabels.find((l) => l.id === labelId);
+      if (label) {
+        queryClient.setQueryData<TaskLabel[]>(['task-labels', taskId], (old) =>
+          old ? [...old, label] : [label]
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, { taskId }, ctx) => {
+      if (ctx?.previous !== undefined) {
+        queryClient.setQueryData(['task-labels', taskId], ctx.previous);
+      }
+    },
     onSettled: (_data, _err, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: ['task-labels', taskId] });
     },
