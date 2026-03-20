@@ -9,6 +9,9 @@ import (
 // ErrLabelNotFound is returned when a label does not exist or does not belong to the user.
 var ErrLabelNotFound = errors.New("label not found")
 
+// ErrLabelAlreadyAssigned is returned when a label is already assigned to a task.
+var ErrLabelAlreadyAssigned = errors.New("label already assigned to task")
+
 // ErrLabelAssignmentNotFound is returned when a label assignment does not exist.
 var ErrLabelAssignmentNotFound = errors.New("label assignment not found")
 
