@@ -169,13 +169,9 @@ func (r *SQLiteTaskLabelsRepository) ListForTask(ctx context.Context, taskID str
 func (r *SQLiteTaskLabelsRepository) AssignLabel(ctx context.Context, a TaskLabelAssignmentCreate) error {
 	now := time.Now().UTC().Format(timeFormat)
 
-	// Try to re-activate a soft-deleted assignment first, otherwise insert new.
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO task_label_assignments (id, task_id, label_id, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?)
-		 ON CONFLICT(task_id, label_id) DO UPDATE
-		   SET deleted_at = NULL,
-		       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+		 VALUES (?, ?, ?, ?, ?)`,
 		a.ID, a.TaskID, a.LabelID, now, now,
 	)
 	if err != nil {
