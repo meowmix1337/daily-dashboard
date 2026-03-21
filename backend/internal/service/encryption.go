@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
@@ -13,6 +14,23 @@ import (
 // EncryptionService provides AES-256-GCM encryption for sensitive fields.
 type EncryptionService struct {
 	gcm cipher.AEAD
+}
+
+// ProvideEncryptionService creates an EncryptionService from a hex-encoded key string.
+// Returns (nil, nil) if hexKey is empty (encryption disabled).
+// Returns an error if hexKey is set but invalid (not hex or not 32 bytes).
+func ProvideEncryptionService(hexKey string) (*EncryptionService, error) {
+	if hexKey == "" {
+		return nil, nil
+	}
+	key, err := hex.DecodeString(hexKey)
+	if err != nil {
+		return nil, fmt.Errorf("ENCRYPTION_KEY is not valid hex: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("ENCRYPTION_KEY must be exactly 64 hex chars (32 bytes for AES-256), got %d bytes", len(key))
+	}
+	return NewEncryptionService(key)
 }
 
 // NewEncryptionService creates an EncryptionService from a 32-byte AES-256 key.

@@ -27,8 +27,7 @@ type Config struct {
 	FrontendURL        string // post-login redirect target — required
 	SecureCookies      bool   // set Secure flag on cookies; default true, disable only for local HTTP dev
 	CORSOrigin         string // allowed CORS origin; defaults to http://localhost:5173
-	EncryptionKey      string // hex-encoded AES-256 key for encrypting sensitive fields (optional)
-	EncryptionKeyBytes []byte // decoded bytes of EncryptionKey; populated by main after validation
+	EncryptionKey string // hex-encoded AES-256 key for encrypting sensitive fields (optional)
 }
 
 func Load() *Config {

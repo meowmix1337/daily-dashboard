@@ -60,33 +60,19 @@ func main() {
 		}
 	}
 
-	// Decode optional encryption key from hex; must be exactly 32 bytes (64 hex chars) for AES-256.
-	if cfg.EncryptionKey != "" {
-		encKey, encErr := hex.DecodeString(cfg.EncryptionKey)
-		if encErr != nil || len(encKey) != 32 {
-			slog.Error("ENCRYPTION_KEY must be a valid hex string of exactly 64 chars (openssl rand -hex 32)")
-			missing = true
-		} else {
-			cfg.EncryptionKeyBytes = encKey
-			cfg.EncryptionKey = "" // clear hex string from memory
-		}
-	} else {
-		slog.Warn("ENCRYPTION_KEY not set — calendar ICS URLs will be stored unencrypted")
-	}
-
 	if missing {
 		os.Exit(1)
 	}
 
-	// Build EncryptionService from validated key bytes (before server wiring).
-	var encSvc *service.EncryptionService
-	if len(cfg.EncryptionKeyBytes) > 0 {
-		var encErr error
-		encSvc, encErr = service.NewEncryptionService(cfg.EncryptionKeyBytes)
-		if encErr != nil {
-			slog.Error("failed to create encryption service", "error", encErr)
-			os.Exit(1)
-		}
+	// Build EncryptionService from hex key (validates + constructs in one step).
+	encSvc, encErr := service.ProvideEncryptionService(cfg.EncryptionKey)
+	if encErr != nil {
+		slog.Error("invalid ENCRYPTION_KEY (generate with: openssl rand -hex 32)", "error", encErr)
+		os.Exit(1)
+	}
+	cfg.EncryptionKey = "" // clear hex string from memory
+	if encSvc == nil {
+		slog.Warn("ENCRYPTION_KEY not set — calendar ICS URLs will be stored unencrypted")
 	}
 
 	db, err := database.Open(cfg.SQLitePath)
