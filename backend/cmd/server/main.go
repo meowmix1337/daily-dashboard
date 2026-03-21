@@ -14,6 +14,7 @@ import (
 	"github.com/daily-dashboard/backend/internal/config"
 	"github.com/daily-dashboard/backend/internal/database"
 	"github.com/daily-dashboard/backend/internal/server"
+	"github.com/daily-dashboard/backend/internal/service"
 )
 
 func main() {
@@ -63,6 +64,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Build EncryptionService from hex key (required — validates + constructs in one step).
+	encSvc, encErr := service.ProvideEncryptionService(cfg.EncryptionKey)
+	if encErr != nil {
+		slog.Error("ENCRYPTION_KEY configuration failed", "error", encErr)
+		os.Exit(1)
+	}
+	cfg.EncryptionKey = "" // clear hex string from memory
+
 	db, err := database.Open(cfg.SQLitePath)
 	if err != nil {
 		slog.Error("failed to open database", "error", err)
@@ -77,7 +86,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := server.New(cfg, db)
+	srv := server.New(cfg, db, encSvc)
 
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Port,
