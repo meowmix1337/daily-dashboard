@@ -21,15 +21,17 @@ import (
 type Server struct {
 	router *chi.Mux
 	cfg    *config.Config
-	db     *sqlx.DB // used by service constructors added in subsequent PRs
+	db     *sqlx.DB
+	encSvc *service.EncryptionService // nil means no encryption
 }
 
 // New creates a new Server with all services, handlers, and routes registered.
-func New(cfg *config.Config, db *sqlx.DB) *Server {
+func New(cfg *config.Config, db *sqlx.DB, encSvc *service.EncryptionService) *Server {
 	s := &Server{
 		router: chi.NewRouter(),
 		cfg:    cfg,
 		db:     db,
+		encSvc: encSvc,
 	}
 	s.setupRoutes()
 	return s
@@ -62,7 +64,7 @@ func (s *Server) setupRoutes() {
 	taskRepo := repository.NewSQLiteTaskRepository(s.db)
 	tasksSvc := service.NewTasksService(taskRepo)
 	settingsRepo := repository.NewSQLiteUserSettingsRepository(s.db)
-	settingsSvc := service.NewUserSettingsService(settingsRepo)
+	settingsSvc := service.NewUserSettingsService(settingsRepo, s.encSvc)
 	labelRepo := repository.NewSQLiteTaskLabelsRepository(s.db)
 	labelsSvc := service.NewTaskLabelsService(labelRepo)
 	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)

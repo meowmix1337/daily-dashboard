@@ -103,6 +103,7 @@ The calendar card reads any standard ICS/iCal feed — no OAuth required.
 | `TIMEZONE` | IANA timezone for calendar date filtering (e.g. `America/New_York`) | No | server local (UTC in Docker) |
 | `PORT` | Backend server port | No | 8080 |
 | `CORS_ORIGIN` | Allowed CORS origin for the API (set to your frontend URL in production) | No | `http://localhost:5173` |
+| `ENCRYPTION_KEY` | AES-256 key for encrypting sensitive fields (e.g. calendar ICS URLs). Generate with `openssl rand -hex 32` | No | — (plaintext storage) |
 
 ## API Endpoints
 

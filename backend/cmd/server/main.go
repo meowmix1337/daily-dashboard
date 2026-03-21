@@ -14,6 +14,7 @@ import (
 	"github.com/daily-dashboard/backend/internal/config"
 	"github.com/daily-dashboard/backend/internal/database"
 	"github.com/daily-dashboard/backend/internal/server"
+	"github.com/daily-dashboard/backend/internal/service"
 )
 
 func main() {
@@ -59,8 +60,33 @@ func main() {
 		}
 	}
 
+	// Decode optional encryption key from hex; must be exactly 32 bytes (64 hex chars) for AES-256.
+	if cfg.EncryptionKey != "" {
+		encKey, encErr := hex.DecodeString(cfg.EncryptionKey)
+		if encErr != nil || len(encKey) != 32 {
+			slog.Error("ENCRYPTION_KEY must be a valid hex string of exactly 64 chars (openssl rand -hex 32)")
+			missing = true
+		} else {
+			cfg.EncryptionKeyBytes = encKey
+			cfg.EncryptionKey = "" // clear hex string from memory
+		}
+	} else {
+		slog.Warn("ENCRYPTION_KEY not set — calendar ICS URLs will be stored unencrypted")
+	}
+
 	if missing {
 		os.Exit(1)
+	}
+
+	// Build EncryptionService from validated key bytes (before server wiring).
+	var encSvc *service.EncryptionService
+	if len(cfg.EncryptionKeyBytes) > 0 {
+		var encErr error
+		encSvc, encErr = service.NewEncryptionService(cfg.EncryptionKeyBytes)
+		if encErr != nil {
+			slog.Error("failed to create encryption service", "error", encErr)
+			os.Exit(1)
+		}
 	}
 
 	db, err := database.Open(cfg.SQLitePath)
@@ -77,7 +103,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := server.New(cfg, db)
+	srv := server.New(cfg, db, encSvc)
 
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Port,

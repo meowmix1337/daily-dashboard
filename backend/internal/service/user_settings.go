@@ -22,11 +22,13 @@ var ErrCategoryNotFound = errors.New("news category not found")
 // UserSettingsService manages user settings via a repository.
 type UserSettingsService struct {
 	repo repository.UserSettingsRepository
+	enc  *EncryptionService // nil means no encryption (dev mode)
 }
 
 // NewUserSettingsService creates a new UserSettingsService backed by the given repository.
-func NewUserSettingsService(repo repository.UserSettingsRepository) *UserSettingsService {
-	return &UserSettingsService{repo: repo}
+// enc may be nil to disable encryption of sensitive fields.
+func NewUserSettingsService(repo repository.UserSettingsRepository, enc *EncryptionService) *UserSettingsService {
+	return &UserSettingsService{repo: repo, enc: enc}
 }
 
 // Get returns the settings for the given user, or nil if no settings have been configured yet.
@@ -39,6 +41,9 @@ func (s *UserSettingsService) Get(ctx context.Context, userID string) (*model.Us
 		return nil, fmt.Errorf("get user settings: %w", err)
 	}
 	m := settingsRowToModel(row)
+	if err := s.decryptSensitiveFields(&m); err != nil {
+		return nil, err
+	}
 	return &m, nil
 }
 
@@ -51,13 +56,27 @@ func (s *UserSettingsService) Upsert(ctx context.Context, userID string, u repos
 	if u.CalendarICSURL != nil {
 		trimmed := strings.TrimSpace(*u.CalendarICSURL)
 		u.CalendarICSURL = &trimmed
+		if strings.HasPrefix(trimmed, "enc:") {
+			return model.UserSettings{}, fmt.Errorf("%w: calendar URL must not start with \"enc:\"", ErrSettingsValidation)
+		}
+		if s.enc != nil && trimmed != "" {
+			encrypted, encErr := s.enc.Encrypt(trimmed)
+			if encErr != nil {
+				return model.UserSettings{}, fmt.Errorf("encrypt calendar URL: %w", encErr)
+			}
+			u.CalendarICSURL = &encrypted
+		}
 	}
 
 	row, err := s.repo.Upsert(ctx, userID, u)
 	if err != nil {
 		return model.UserSettings{}, fmt.Errorf("upsert user settings: %w", err)
 	}
-	return settingsRowToModel(row), nil
+	m := settingsRowToModel(row)
+	if err := s.decryptSensitiveFields(&m); err != nil {
+		return model.UserSettings{}, err
+	}
+	return m, nil
 }
 
 // ListAllCategories returns all available news category types.
@@ -106,6 +125,17 @@ func (s *UserSettingsService) SetSelectedCategories(ctx context.Context, userID 
 
 	if err := s.repo.SetSelectedCategories(ctx, userID, categoryIDs); err != nil {
 		return fmt.Errorf("set selected categories: %w", err)
+	}
+	return nil
+}
+
+func (s *UserSettingsService) decryptSensitiveFields(m *model.UserSettings) error {
+	if s.enc != nil && m.CalendarICSURL != nil && *m.CalendarICSURL != "" {
+		decrypted, err := s.enc.Decrypt(*m.CalendarICSURL)
+		if err != nil {
+			return fmt.Errorf("decrypt calendar URL: %w", err)
+		}
+		m.CalendarICSURL = &decrypted
 	}
 	return nil
 }
