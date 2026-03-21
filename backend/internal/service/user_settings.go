@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 
@@ -135,7 +136,11 @@ func (s *UserSettingsService) SetSelectedCategories(ctx context.Context, userID 
 	return nil
 }
 
-// validateCalendarURL rejects URLs with schemes other than http/https to prevent SSRF.
+// validateCalendarURL rejects URLs that could cause SSRF:
+// - Only http/https schemes allowed
+// - Hostname must be present
+// - Literal private/loopback/link-local IPs rejected
+// - Known cloud metadata hostnames blocked
 func validateCalendarURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -143,10 +148,33 @@ func validateCalendarURL(raw string) error {
 	}
 	switch u.Scheme {
 	case "https", "http":
-		return nil
+		// ok
 	default:
 		return fmt.Errorf("%w: calendar URL must use https:// or http:// scheme", ErrSettingsValidation)
 	}
+
+	hostname := u.Hostname()
+	if hostname == "" {
+		return fmt.Errorf("%w: calendar URL must include a hostname", ErrSettingsValidation)
+	}
+
+	// Reject literal private/loopback/link-local IPs.
+	if ip := net.ParseIP(hostname); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+			ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return fmt.Errorf("%w: calendar URL must not point to a private or reserved address", ErrSettingsValidation)
+		}
+	}
+
+	// Block known cloud metadata hostnames.
+	lower := strings.ToLower(hostname)
+	for _, blocked := range []string{"metadata.google.internal", "metadata.internal", "instance-data"} {
+		if lower == blocked {
+			return fmt.Errorf("%w: calendar URL must not point to a cloud metadata endpoint", ErrSettingsValidation)
+		}
+	}
+
+	return nil
 }
 
 func (s *UserSettingsService) decryptSensitiveFields(m *model.UserSettings) error {
