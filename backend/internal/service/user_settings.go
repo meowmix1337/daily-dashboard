@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/daily-dashboard/backend/internal/model"
@@ -58,6 +59,11 @@ func (s *UserSettingsService) Upsert(ctx context.Context, userID string, u repos
 		u.CalendarICSURL = &trimmed
 		if strings.HasPrefix(trimmed, "enc:") {
 			return model.UserSettings{}, fmt.Errorf("%w: calendar URL must not start with \"enc:\"", ErrSettingsValidation)
+		}
+		if trimmed != "" {
+			if err := validateCalendarURL(trimmed); err != nil {
+				return model.UserSettings{}, err
+			}
 		}
 		if s.enc != nil && trimmed != "" {
 			encrypted, encErr := s.enc.Encrypt(trimmed)
@@ -127,6 +133,20 @@ func (s *UserSettingsService) SetSelectedCategories(ctx context.Context, userID 
 		return fmt.Errorf("set selected categories: %w", err)
 	}
 	return nil
+}
+
+// validateCalendarURL rejects URLs with schemes other than http/https to prevent SSRF.
+func validateCalendarURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("%w: invalid calendar URL", ErrSettingsValidation)
+	}
+	switch u.Scheme {
+	case "https", "http":
+		return nil
+	default:
+		return fmt.Errorf("%w: calendar URL must use https:// or http:// scheme", ErrSettingsValidation)
+	}
 }
 
 func (s *UserSettingsService) decryptSensitiveFields(m *model.UserSettings) error {
