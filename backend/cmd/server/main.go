@@ -64,16 +64,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Build EncryptionService from hex key (validates + constructs in one step).
+	// Build EncryptionService from hex key (required — validates + constructs in one step).
 	encSvc, encErr := service.ProvideEncryptionService(cfg.EncryptionKey)
 	if encErr != nil {
-		slog.Error("invalid ENCRYPTION_KEY (generate with: openssl rand -hex 32)", "error", encErr)
+		slog.Error("ENCRYPTION_KEY configuration failed", "error", encErr)
 		os.Exit(1)
 	}
 	cfg.EncryptionKey = "" // clear hex string from memory
-	if encSvc == nil {
-		slog.Warn("ENCRYPTION_KEY not set — calendar ICS URLs will be stored unencrypted")
-	}
 
 	db, err := database.Open(cfg.SQLitePath)
 	if err != nil {

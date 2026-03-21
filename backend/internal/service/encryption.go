@@ -17,11 +17,10 @@ type EncryptionService struct {
 }
 
 // ProvideEncryptionService creates an EncryptionService from a hex-encoded key string.
-// Returns (nil, nil) if hexKey is empty (encryption disabled).
-// Returns an error if hexKey is set but invalid (not hex or not 32 bytes).
+// Returns an error if hexKey is empty, not valid hex, or not exactly 32 bytes.
 func ProvideEncryptionService(hexKey string) (*EncryptionService, error) {
 	if hexKey == "" {
-		return nil, nil
+		return nil, fmt.Errorf("ENCRYPTION_KEY is required (generate with: openssl rand -hex 32)")
 	}
 	key, err := hex.DecodeString(hexKey)
 	if err != nil {
