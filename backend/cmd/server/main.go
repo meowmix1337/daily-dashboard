@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -57,6 +58,25 @@ func main() {
 			(u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 			slog.Error("FRONTEND_URL must be an absolute http(s) URL", "value", cfg.FrontendURL)
 			missing = true
+		}
+	}
+
+	// Reject CORS_ORIGIN=* or "null" — incompatible with Access-Control-Allow-Credentials: true.
+	corsOrigin := strings.TrimSpace(cfg.CORSOrigin)
+	if corsOrigin == "*" || strings.EqualFold(corsOrigin, "null") {
+		slog.Error("CORS_ORIGIN must not be \"*\" or \"null\" (credentials mode requires a specific origin)")
+		missing = true
+	} else if corsOrigin != "" {
+		u, parseErr := url.Parse(corsOrigin)
+		if parseErr != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			slog.Error("CORS_ORIGIN must be an absolute http(s) URL", "value", corsOrigin)
+			missing = true
+		} else if (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
+			slog.Error("CORS_ORIGIN must be scheme://host[:port] with no path or query", "value", corsOrigin)
+			missing = true
+		} else {
+			// Normalize to scheme://host (no trailing slash) to match browser Origin header.
+			cfg.CORSOrigin = u.Scheme + "://" + u.Host
 		}
 	}
 
