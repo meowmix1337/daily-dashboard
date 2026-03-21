@@ -33,7 +33,7 @@ import { StocksCard } from './StocksCard';
 import { QuoteCard } from './QuoteCard';
 import { UserProfile } from './UserProfile';
 import { UnavailableCard } from './ui/UnavailableCard';
-import { SettingsModal } from './SettingsModal';
+import { SettingsPanel } from './SettingsPanel';
 
 function getGreeting(date: Date): string {
   const h = date.getHours();
@@ -402,25 +402,7 @@ export default function Dashboard(): React.ReactElement {
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              title="Settings"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 10,
-                width: 36,
-                height: 36,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                fontSize: 16,
-                color: 'var(--text-secondary)',
-                flexShrink: 0,
-              }}
-            >⚙</button>
-            {user && <UserProfile user={user} />}
+            {user && <UserProfile user={user} onOpenSettings={() => setShowSettings(true)} />}
           </div>
         </div>
 
@@ -521,7 +503,7 @@ export default function Dashboard(): React.ReactElement {
         </div>
       </div>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
