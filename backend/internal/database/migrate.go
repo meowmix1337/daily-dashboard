@@ -7,7 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
 
-	"github.com/daily-dashboard/backend/migrations"
+	"github.com/meowmix1337/argus/backend/migrations"
 )
 
 // Migrate runs all pending database migrations using goose.

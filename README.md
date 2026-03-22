@@ -1,4 +1,4 @@
-# Daily Dashboard
+# Argus
 
 A personal daily life dashboard with a Go backend and React/TypeScript frontend. Displays weather, calendar, tasks, news, stocks/crypto, and a daily quote — all in a single dark-themed view.
 
@@ -156,7 +156,7 @@ The calendar card reads any standard ICS/iCal feed — no OAuth required.
 ## Project Structure
 
 ```
-daily-dashboard/
+argus/
 ├── backend/
 │   ├── cmd/server/main.go        # Entrypoint
 │   ├── db/migrations/            # goose SQL migrations
@@ -193,7 +193,7 @@ Deploy on any Linux VPS:
 
 ```bash
 git clone <your-repo>
-cd daily-dashboard
+cd argus
 cp .env.example .env
 # Fill in API keys
 docker compose up -d

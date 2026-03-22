@@ -11,10 +11,10 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/go-playground/validator/v10"
 
-	apperrors "github.com/daily-dashboard/backend/internal/errors"
-	"github.com/daily-dashboard/backend/internal/model"
-	"github.com/daily-dashboard/backend/internal/response"
-	"github.com/daily-dashboard/backend/internal/service"
+	apperrors "github.com/meowmix1337/argus/backend/internal/errors"
+	"github.com/meowmix1337/argus/backend/internal/model"
+	"github.com/meowmix1337/argus/backend/internal/response"
+	"github.com/meowmix1337/argus/backend/internal/service"
 )
 
 // UserSettingsHandler handles reading and updating user-scoped settings.

@@ -1,4 +1,4 @@
-module github.com/daily-dashboard/backend
+module github.com/meowmix1337/argus/backend
 
 go 1.26
 

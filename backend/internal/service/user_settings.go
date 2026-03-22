@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	apperrors "github.com/daily-dashboard/backend/internal/errors"
-	"github.com/daily-dashboard/backend/internal/model"
+	apperrors "github.com/meowmix1337/argus/backend/internal/errors"
+	"github.com/meowmix1337/argus/backend/internal/model"
 )
 
 // ErrSettingsNotFound is returned when user settings do not exist.
