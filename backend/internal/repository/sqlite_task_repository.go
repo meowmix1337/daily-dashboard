@@ -44,7 +44,15 @@ func NewSQLiteTaskRepository(db *sqlx.DB) *SQLiteTaskRepository {
 	return &SQLiteTaskRepository{db: db}
 }
 
-func (r *SQLiteTaskRepository) List(ctx context.Context, userID string) ([]model.Task, error) {
+func (r *SQLiteTaskRepository) List(ctx context.Context, userID string, limit, offset int) ([]model.Task, int, error) {
+	var total int
+	if err := r.db.GetContext(ctx, &total,
+		`SELECT COUNT(*) FROM tasks WHERE deleted_at IS NULL AND user_id = ?`,
+		userID,
+	); err != nil {
+		return nil, 0, fmt.Errorf("count tasks: %w", err)
+	}
+
 	var rows []sqliteTaskRow
 	err := r.db.SelectContext(ctx, &rows,
 		`SELECT id, user_id, text, done, priority_id, created_at, updated_at
@@ -56,18 +64,19 @@ func (r *SQLiteTaskRepository) List(ctx context.Context, userID string) ([]model
 		     WHEN 'medium' THEN 2
 		     WHEN 'low' THEN 3
 		   END,
-		   created_at ASC`,
-		userID,
+		   created_at ASC
+		 LIMIT ? OFFSET ?`,
+		userID, limit, offset,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("list tasks: %w", err)
+		return nil, 0, fmt.Errorf("list tasks: %w", err)
 	}
 
 	result := make([]model.Task, 0, len(rows))
 	for i := range rows {
 		result = append(result, rows[i].toModel())
 	}
-	return result, nil
+	return result, total, nil
 }
 
 func (r *SQLiteTaskRepository) Get(ctx context.Context, id string, userID string) (model.Task, error) {

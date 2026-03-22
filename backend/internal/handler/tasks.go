@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -44,14 +45,36 @@ func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, err := h.service.List(r.Context(), userID)
+	limit := 25
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	offset := 0
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	tasks, total, err := h.service.List(r.Context(), userID, limit, offset)
 	if err != nil {
 		slog.Error("failed to list tasks", "error", err, "user_id", userID)
 		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, tasksToResponse(tasks))
+	response.WriteJSON(w, http.StatusOK, TaskListResponse{
+		Tasks:  tasksToResponse(tasks),
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	})
 }
 
 func (h *TasksHandler) Create(w http.ResponseWriter, r *http.Request) {
