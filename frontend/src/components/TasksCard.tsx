@@ -62,7 +62,7 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
     if (isLoadingMoreRef.current || !hasMore) return;
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
-    fetchTasksPage(25, allTasks.length)
+    fetchTasksPage(5, allTasks.length)
       .then((result) => {
         setExtraTasks((prev) => [...prev, ...result.tasks]);
       })
