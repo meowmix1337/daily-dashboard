@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/go-playground/validator/v10"
 
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -35,34 +37,32 @@ func (h *StocksHandler) AddRoutes(r chi.Router) {
 func (h *StocksHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	data, err := h.service.Fetch(r.Context(), userID)
 	if err != nil {
 		slog.Error("stocks fetch error", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	response.WriteJSON(w, http.StatusOK, data)
 }
 
 // GetWatchlist returns the current list of watchlist symbols.
 func (h *StocksHandler) GetWatchlist(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	syms, err := h.service.GetSymbols(r.Context(), userID)
 	if err != nil {
 		slog.Error("stocks get watchlist error", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(WatchlistResponse{Symbols: syms})
+	response.WriteJSON(w, http.StatusOK, WatchlistResponse{Symbols: syms})
 }
 
 // AddSymbol adds a symbol to the watchlist.
@@ -71,36 +71,34 @@ func (h *StocksHandler) GetWatchlist(w http.ResponseWriter, r *http.Request) {
 func (h *StocksHandler) AddSymbol(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096) // 4 KB is generous for these small JSON bodies
 	var body AddSymbolRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&body); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.service.AddSymbol(r.Context(), userID, body.Symbol); err != nil {
 		slog.Error("stocks add error", "error", err)
-		http.Error(w, "invalid symbol", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid symbol")
 		return
 	}
 
 	syms, err := h.service.GetSymbols(r.Context(), userID)
 	if err != nil {
 		slog.Error("stocks get watchlist error", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(WatchlistResponse{Symbols: syms})
+	response.WriteJSON(w, http.StatusCreated, WatchlistResponse{Symbols: syms})
 }
 
 // RemoveSymbol removes a symbol from the watchlist.
@@ -108,16 +106,16 @@ func (h *StocksHandler) AddSymbol(w http.ResponseWriter, r *http.Request) {
 func (h *StocksHandler) RemoveSymbol(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	sym := chi.URLParam(r, "symbol")
 	if err := h.service.RemoveSymbol(r.Context(), userID, sym); err != nil {
-		if errors.Is(err, service.ErrSymbolNotFound) {
-			http.Error(w, "symbol not found", http.StatusNotFound)
+		if errors.Is(err, apperrors.ErrSymbolNotFound) {
+			response.WriteError(w, http.StatusNotFound, "symbol not found")
 		} else {
 			slog.Error("stocks remove error", "error", err)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -125,11 +123,10 @@ func (h *StocksHandler) RemoveSymbol(w http.ResponseWriter, r *http.Request) {
 	syms, err := h.service.GetSymbols(r.Context(), userID)
 	if err != nil {
 		slog.Error("stocks get watchlist error", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(WatchlistResponse{Symbols: syms})
+	response.WriteJSON(w, http.StatusOK, WatchlistResponse{Symbols: syms})
 }
 
 // SearchSymbols proxies Finnhub symbol search to keep the API key server-side.
@@ -137,18 +134,18 @@ func (h *StocksHandler) RemoveSymbol(w http.ResponseWriter, r *http.Request) {
 func (h *StocksHandler) SearchSymbols(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if q == "" {
-		http.Error(w, "missing query parameter 'q'", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "missing query parameter 'q'")
 		return
 	}
 	if len(q) > 50 {
-		http.Error(w, "query too long", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "query too long")
 		return
 	}
 
 	results, err := h.service.SearchSymbols(r.Context(), q)
 	if err != nil {
 		slog.Error("stocks search error", "error", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -161,7 +158,6 @@ func (h *StocksHandler) SearchSymbols(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(SearchResponse{Results: dtos})
+	response.WriteJSON(w, http.StatusOK, SearchResponse{Results: dtos})
 }
 

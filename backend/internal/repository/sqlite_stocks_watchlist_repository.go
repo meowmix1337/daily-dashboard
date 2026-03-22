@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
@@ -21,19 +19,33 @@ func NewSQLiteStocksWatchlistRepository(db *sqlx.DB) *SQLiteStocksWatchlistRepos
 	return &SQLiteStocksWatchlistRepository{db: db}
 }
 
-func (r *SQLiteStocksWatchlistRepository) List(ctx context.Context, userID string) ([]WatchlistRow, error) {
-	var rows []WatchlistRow
-	err := r.db.SelectContext(ctx, &rows,
-		`SELECT id, user_id, symbol, created_at, updated_at
+func (r *SQLiteStocksWatchlistRepository) ListSymbols(ctx context.Context, userID string) ([]string, error) {
+	var symbols []string
+	err := r.db.SelectContext(ctx, &symbols,
+		`SELECT symbol
 		 FROM stocks_watchlist
 		 WHERE deleted_at IS NULL AND user_id = ?
 		 ORDER BY created_at ASC`,
 		userID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("list watchlist: %w", err)
+		return nil, fmt.Errorf("list watchlist symbols: %w", err)
 	}
-	return rows, nil
+	return symbols, nil
+}
+
+func (r *SQLiteStocksWatchlistRepository) Exists(ctx context.Context, userID string, symbol string) (bool, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count,
+		`SELECT COUNT(1)
+		 FROM stocks_watchlist
+		 WHERE user_id = ? AND symbol = ? AND deleted_at IS NULL`,
+		userID, symbol,
+	)
+	if err != nil {
+		return false, fmt.Errorf("check watchlist symbol: %w", err)
+	}
+	return count > 0, nil
 }
 
 func (r *SQLiteStocksWatchlistRepository) Add(ctx context.Context, userID string, symbol string) error {
@@ -55,23 +67,6 @@ func (r *SQLiteStocksWatchlistRepository) Add(ctx context.Context, userID string
 		return fmt.Errorf("add to watchlist: %w", err)
 	}
 	return nil
-}
-
-func (r *SQLiteStocksWatchlistRepository) Get(ctx context.Context, userID string, symbol string) (WatchlistRow, error) {
-	var row WatchlistRow
-	err := r.db.GetContext(ctx, &row,
-		`SELECT id, user_id, symbol, created_at, updated_at
-		 FROM stocks_watchlist
-		 WHERE user_id = ? AND symbol = ? AND deleted_at IS NULL`,
-		userID, symbol,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return WatchlistRow{}, sql.ErrNoRows
-		}
-		return WatchlistRow{}, fmt.Errorf("get watchlist symbol: %w", err)
-	}
-	return row, nil
 }
 
 func (r *SQLiteStocksWatchlistRepository) Remove(ctx context.Context, userID string, symbol string) error {

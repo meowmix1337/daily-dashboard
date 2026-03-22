@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
+	"github.com/daily-dashboard/backend/internal/model"
 )
 
 // sqliteTaskLabelRow mirrors the task_labels table with string timestamps for SQLite scanning.
@@ -21,22 +24,16 @@ type sqliteTaskLabelRow struct {
 	UpdatedAt string `db:"updated_at"`
 }
 
-func (r *sqliteTaskLabelRow) toTaskLabelRow() (TaskLabelRow, error) {
+func (r *sqliteTaskLabelRow) toModel() (model.TaskLabel, error) {
 	createdAt, err := time.Parse(timeFormat, r.CreatedAt)
 	if err != nil {
-		return TaskLabelRow{}, fmt.Errorf("parse created_at: %w", err)
+		return model.TaskLabel{}, fmt.Errorf("parse created_at: %w", err)
 	}
-	updatedAt, err := time.Parse(timeFormat, r.UpdatedAt)
-	if err != nil {
-		return TaskLabelRow{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-	return TaskLabelRow{
+	return model.TaskLabel{
 		ID:        r.ID,
-		UserID:    r.UserID,
 		Name:      r.Name,
 		Color:     r.Color,
 		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
 	}, nil
 }
 
@@ -50,7 +47,7 @@ func NewSQLiteTaskLabelsRepository(db *sqlx.DB) *SQLiteTaskLabelsRepository {
 	return &SQLiteTaskLabelsRepository{db: db}
 }
 
-func (r *SQLiteTaskLabelsRepository) List(ctx context.Context, userID string) ([]TaskLabelRow, error) {
+func (r *SQLiteTaskLabelsRepository) List(ctx context.Context, userID string) ([]model.TaskLabel, error) {
 	var rows []sqliteTaskLabelRow
 	err := r.db.SelectContext(ctx, &rows,
 		`SELECT id, user_id, name, color, created_at, updated_at
@@ -63,9 +60,9 @@ func (r *SQLiteTaskLabelsRepository) List(ctx context.Context, userID string) ([
 		return nil, fmt.Errorf("list task labels: %w", err)
 	}
 
-	result := make([]TaskLabelRow, 0, len(rows))
+	result := make([]model.TaskLabel, 0, len(rows))
 	for i := range rows {
-		lr, err := rows[i].toTaskLabelRow()
+		lr, err := rows[i].toModel()
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +71,7 @@ func (r *SQLiteTaskLabelsRepository) List(ctx context.Context, userID string) ([
 	return result, nil
 }
 
-func (r *SQLiteTaskLabelsRepository) Get(ctx context.Context, id string, userID string) (TaskLabelRow, error) {
+func (r *SQLiteTaskLabelsRepository) Get(ctx context.Context, id string, userID string) (model.TaskLabel, error) {
 	var row sqliteTaskLabelRow
 	err := r.db.GetContext(ctx, &row,
 		`SELECT id, user_id, name, color, created_at, updated_at
@@ -84,14 +81,14 @@ func (r *SQLiteTaskLabelsRepository) Get(ctx context.Context, id string, userID 
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return TaskLabelRow{}, ErrLabelNotFound
+			return model.TaskLabel{}, apperrors.ErrLabelNotFound
 		}
-		return TaskLabelRow{}, fmt.Errorf("get task label: %w", err)
+		return model.TaskLabel{}, fmt.Errorf("get task label: %w", err)
 	}
-	return row.toTaskLabelRow()
+	return row.toModel()
 }
 
-func (r *SQLiteTaskLabelsRepository) Create(ctx context.Context, l TaskLabelCreate) (TaskLabelRow, error) {
+func (r *SQLiteTaskLabelsRepository) Create(ctx context.Context, l model.TaskLabelCreate) (model.TaskLabel, error) {
 	now := time.Now().UTC().Format(timeFormat)
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO task_labels (id, user_id, name, color, created_at, updated_at)
@@ -99,12 +96,12 @@ func (r *SQLiteTaskLabelsRepository) Create(ctx context.Context, l TaskLabelCrea
 		l.ID, l.UserID, l.Name, l.Color, now, now,
 	)
 	if err != nil {
-		return TaskLabelRow{}, fmt.Errorf("create task label: %w", err)
+		return model.TaskLabel{}, fmt.Errorf("create task label: %w", err)
 	}
 	return r.Get(ctx, l.ID, l.UserID)
 }
 
-func (r *SQLiteTaskLabelsRepository) Update(ctx context.Context, id string, userID string, u TaskLabelUpdate) error {
+func (r *SQLiteTaskLabelsRepository) Update(ctx context.Context, id string, userID string, u model.TaskLabelUpdate) error {
 	now := time.Now().UTC().Format(timeFormat)
 
 	setClauses := []string{"updated_at = ?"}
@@ -141,7 +138,7 @@ func (r *SQLiteTaskLabelsRepository) Delete(ctx context.Context, id string, user
 	return nil
 }
 
-func (r *SQLiteTaskLabelsRepository) ListForTask(ctx context.Context, taskID string, userID string) ([]TaskLabelRow, error) {
+func (r *SQLiteTaskLabelsRepository) ListForTask(ctx context.Context, taskID string, userID string) ([]model.TaskLabel, error) {
 	var rows []sqliteTaskLabelRow
 	err := r.db.SelectContext(ctx, &rows,
 		`SELECT tl.id, tl.user_id, tl.name, tl.color, tl.created_at, tl.updated_at
@@ -155,9 +152,9 @@ func (r *SQLiteTaskLabelsRepository) ListForTask(ctx context.Context, taskID str
 		return nil, fmt.Errorf("list labels for task: %w", err)
 	}
 
-	result := make([]TaskLabelRow, 0, len(rows))
+	result := make([]model.TaskLabel, 0, len(rows))
 	for i := range rows {
-		lr, err := rows[i].toTaskLabelRow()
+		lr, err := rows[i].toModel()
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +163,7 @@ func (r *SQLiteTaskLabelsRepository) ListForTask(ctx context.Context, taskID str
 	return result, nil
 }
 
-func (r *SQLiteTaskLabelsRepository) AssignLabel(ctx context.Context, a TaskLabelAssignmentCreate) error {
+func (r *SQLiteTaskLabelsRepository) AssignLabel(ctx context.Context, a model.TaskLabelAssignmentCreate) error {
 	now := time.Now().UTC().Format(timeFormat)
 
 	_, err := r.db.ExecContext(ctx,
@@ -176,7 +173,7 @@ func (r *SQLiteTaskLabelsRepository) AssignLabel(ctx context.Context, a TaskLabe
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-			return ErrLabelAlreadyAssigned
+			return apperrors.ErrLabelAlreadyAssigned
 		}
 		return fmt.Errorf("assign label: %w", err)
 	}

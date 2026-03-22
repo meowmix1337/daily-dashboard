@@ -89,3 +89,19 @@ type Quote struct {
 	Text   string `json:"text"`
 	Author string `json:"author"`
 }
+
+// TaskCreate holds fields for creating a new task.
+type TaskCreate struct {
+	ID         string
+	UserID     string
+	Text       string
+	Done       bool
+	PriorityID string
+}
+
+// TaskUpdate holds optional fields for updating a task.
+type TaskUpdate struct {
+	Done       *bool
+	Text       *string
+	PriorityID *string
+}

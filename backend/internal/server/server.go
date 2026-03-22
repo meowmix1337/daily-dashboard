@@ -1,20 +1,21 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/daily-dashboard/backend/internal/config"
 	"github.com/daily-dashboard/backend/internal/handler"
+	"github.com/daily-dashboard/backend/internal/httpclient"
 	"github.com/daily-dashboard/backend/internal/middleware"
 	"github.com/daily-dashboard/backend/internal/repository"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
+	"github.com/daily-dashboard/backend/internal/validate"
 )
 
 // Server holds the HTTP router and all dependencies.
@@ -51,24 +52,25 @@ func (s *Server) setupRoutes() {
 	r.Use(middleware.Logging)
 
 	// Shared dependencies
-	httpClient := &http.Client{Timeout: 30 * time.Second}
+	rawHTTP := &http.Client{Timeout: 30 * time.Second}
+	hc := httpclient.New(rawHTTP)
 	cache := service.NewCacheService()
-	validate := validator.New()
+	v := validate.New()
 
 	// Services
-	weatherSvc := service.NewWeatherService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
-	newsSvc := service.NewNewsService(httpClient, s.cfg.GNewsAPIKey, cache)
+	weatherSvc := service.NewWeatherService(hc, cache, s.cfg.Latitude, s.cfg.Longitude)
+	newsSvc := service.NewNewsService(hc, s.cfg.GNewsAPIKey, cache)
 	watchlistRepo := repository.NewSQLiteStocksWatchlistRepository(s.db)
-	stocksSvc := service.NewStocksService(httpClient, s.cfg.FinnhubAPIKey, cache, watchlistRepo)
-	calendarSvc := service.NewCalendarService(httpClient, s.cfg.ICSCalendarURL, cache, s.cfg.Timezone)
+	stocksSvc := service.NewStocksService(hc, s.cfg.FinnhubAPIKey, cache, watchlistRepo)
+	calendarSvc := service.NewCalendarService(hc, s.cfg.ICSCalendarURL, cache, s.cfg.Timezone)
 	taskRepo := repository.NewSQLiteTaskRepository(s.db)
 	tasksSvc := service.NewTasksService(taskRepo)
 	settingsRepo := repository.NewSQLiteUserSettingsRepository(s.db)
 	settingsSvc := service.NewUserSettingsService(settingsRepo, s.encSvc)
 	labelRepo := repository.NewSQLiteTaskLabelsRepository(s.db)
 	labelsSvc := service.NewTaskLabelsService(labelRepo)
-	sunriseSvc := service.NewSunriseService(httpClient, cache, s.cfg.Latitude, s.cfg.Longitude)
-	quotesSvc := service.NewQuotesService(httpClient, s.cfg.APINinjasAPIKey, cache)
+	sunriseSvc := service.NewSunriseService(hc, cache, s.cfg.Latitude, s.cfg.Longitude)
+	quotesSvc := service.NewQuotesService(hc, s.cfg.APINinjasAPIKey, cache)
 
 	// Auth
 	authSvc := service.NewAuthService(s.db, s.cfg.GoogleClientID, s.cfg.GoogleClientSecret, s.cfg.GoogleCallbackURL)
@@ -79,11 +81,11 @@ func (s *Server) setupRoutes() {
 	// Handlers
 	weatherH := handler.NewWeatherHandler(weatherSvc)
 	newsH := handler.NewNewsHandler(newsSvc)
-	stocksH := handler.NewStocksHandler(stocksSvc, validate)
+	stocksH := handler.NewStocksHandler(stocksSvc, v)
 	calendarH := handler.NewCalendarHandler(calendarSvc)
-	tasksH := handler.NewTasksHandler(tasksSvc, validate)
-	settingsH := handler.NewUserSettingsHandler(settingsSvc, validate)
-	labelsH := handler.NewTaskLabelsHandler(labelsSvc, validate)
+	tasksH := handler.NewTasksHandler(tasksSvc, v)
+	settingsH := handler.NewUserSettingsHandler(settingsSvc, v)
+	labelsH := handler.NewTaskLabelsHandler(labelsSvc, v)
 	metaH := handler.NewMetaHandler(sunriseSvc, quotesSvc)
 	dashboardH := handler.NewDashboardHandler(
 		weatherSvc,
@@ -96,8 +98,7 @@ func (s *Server) setupRoutes() {
 
 	// Public routes — no session required
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		response.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	authH.AddRoutes(r)
 

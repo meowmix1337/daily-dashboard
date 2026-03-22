@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
 
 	ics "github.com/arran4/golang-ical"
 
+	"github.com/daily-dashboard/backend/internal/httpclient"
 	"github.com/daily-dashboard/backend/internal/model"
 )
 
@@ -21,14 +21,14 @@ const calendarCacheTTL = 15 * time.Minute
 
 // CalendarService fetches and parses an ICS/iCal feed URL.
 type CalendarService struct {
-	httpClient *http.Client
+	httpClient httpclient.HTTPClient
 	icsURL     string
 	cache      *CacheService
 	loc        *time.Location
 }
 
 // NewCalendarService creates a new CalendarService.
-func NewCalendarService(httpClient *http.Client, icsURL string, cache *CacheService, loc *time.Location) *CalendarService {
+func NewCalendarService(httpClient httpclient.HTTPClient, icsURL string, cache *CacheService, loc *time.Location) *CalendarService {
 	if loc == nil {
 		loc = time.Local
 	}
@@ -54,25 +54,9 @@ func (s *CalendarService) Fetch(ctx context.Context) ([]model.CalendarEvent, err
 }
 
 func (s *CalendarService) fetchAndParse(ctx context.Context) ([]model.CalendarEvent, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.icsURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("calendar: build request: %w", err)
-	}
-	req.Header.Set("User-Agent", "DailyDashboard/1.0")
-
-	resp, err := s.httpClient.Do(req)
+	body, err := s.httpClient.GetBytes(ctx, s.icsURL, httpclient.WithHeader("User-Agent", "DailyDashboard/1.0"))
 	if err != nil {
 		return nil, fmt.Errorf("calendar: fetch ICS: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("calendar: ICS server returned status %d", resp.StatusCode)
-	}
-
-	body, err := readBody(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("calendar: read body: %w", err)
 	}
 
 	cal, err := ics.ParseCalendar(strings.NewReader(string(body)))

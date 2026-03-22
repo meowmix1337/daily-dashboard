@@ -11,7 +11,9 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/go-playground/validator/v10"
 
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
 	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -41,59 +43,56 @@ func (h *TaskLabelsHandler) AddRoutes(r chi.Router) {
 func (h *TaskLabelsHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	labels, err := h.service.List(r.Context(), userID)
 	if err != nil {
 		slog.Error("failed to list labels", "error", err, "user_id", userID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(labelsToResponse(labels))
+	response.WriteJSON(w, http.StatusOK, labelsToResponse(labels))
 }
 
 func (h *TaskLabelsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var req CreateLabelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	label, err := h.service.Create(r.Context(), userID, req.Name, req.Color)
 	if err != nil {
-		if errors.Is(err, service.ErrLabelValidation) {
-			http.Error(w, "invalid request body", http.StatusBadRequest)
+		if errors.Is(err, apperrors.ErrLabelValidation) {
+			response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		} else {
 			slog.Error("failed to create label", "error", err, "user_id", userID)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(labelToResponse(label))
+	response.WriteJSON(w, http.StatusCreated, labelToResponse(label))
 }
 
 func (h *TaskLabelsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -101,45 +100,44 @@ func (h *TaskLabelsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var req UpdateLabelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	label, err := h.service.Update(r.Context(), id, userID, req.Name, req.Color)
 	if err != nil {
-		if errors.Is(err, service.ErrLabelNotFound) {
-			http.Error(w, "label not found", http.StatusNotFound)
-		} else if errors.Is(err, service.ErrLabelValidation) {
-			http.Error(w, "invalid request body", http.StatusBadRequest)
+		if errors.Is(err, apperrors.ErrLabelNotFound) {
+			response.WriteError(w, http.StatusNotFound, "label not found")
+		} else if errors.Is(err, apperrors.ErrLabelValidation) {
+			response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		} else {
 			slog.Error("failed to update label", "error", err, "user_id", userID, "label_id", id)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(labelToResponse(label))
+	response.WriteJSON(w, http.StatusOK, labelToResponse(label))
 }
 
 func (h *TaskLabelsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id := chi.URLParam(r, "id")
 	if err := h.service.Delete(r.Context(), id, userID); err != nil {
-		if errors.Is(err, service.ErrLabelNotFound) {
-			http.Error(w, "label not found", http.StatusNotFound)
+		if errors.Is(err, apperrors.ErrLabelNotFound) {
+			response.WriteError(w, http.StatusNotFound, "label not found")
 		} else {
 			slog.Error("failed to delete label", "error", err, "user_id", userID, "label_id", id)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -150,7 +148,7 @@ func (h *TaskLabelsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *TaskLabelsHandler) ListForTask(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -158,18 +156,17 @@ func (h *TaskLabelsHandler) ListForTask(w http.ResponseWriter, r *http.Request) 
 	labels, err := h.service.ListForTask(r.Context(), taskID, userID)
 	if err != nil {
 		slog.Error("failed to list labels for task", "error", err, "user_id", userID, "task_id", taskID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(labelsToResponse(labels))
+	response.WriteJSON(w, http.StatusOK, labelsToResponse(labels))
 }
 
 func (h *TaskLabelsHandler) AssignLabel(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -177,22 +174,22 @@ func (h *TaskLabelsHandler) AssignLabel(w http.ResponseWriter, r *http.Request) 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var req AssignLabelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.service.AssignLabel(r.Context(), taskID, req.LabelID, userID); err != nil {
-		if errors.Is(err, service.ErrLabelNotFound) {
-			http.Error(w, "label not found", http.StatusNotFound)
-		} else if errors.Is(err, service.ErrLabelAlreadyAssigned) {
-			http.Error(w, "label already assigned to task", http.StatusConflict)
+		if errors.Is(err, apperrors.ErrLabelNotFound) {
+			response.WriteError(w, http.StatusNotFound, "label not found")
+		} else if errors.Is(err, apperrors.ErrLabelAlreadyAssigned) {
+			response.WriteError(w, http.StatusConflict, "label already assigned to task")
 		} else {
 			slog.Error("failed to assign label", "error", err, "user_id", userID, "task_id", taskID, "label_id", req.LabelID)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -203,7 +200,7 @@ func (h *TaskLabelsHandler) AssignLabel(w http.ResponseWriter, r *http.Request) 
 func (h *TaskLabelsHandler) RemoveLabel(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -212,7 +209,7 @@ func (h *TaskLabelsHandler) RemoveLabel(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.service.RemoveLabel(r.Context(), taskID, labelID, userID); err != nil {
 		slog.Error("failed to remove label", "error", err, "user_id", userID, "task_id", taskID, "label_id", labelID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -224,7 +221,7 @@ func labelToResponse(l model.TaskLabel) LabelResponse {
 		ID:        l.ID,
 		Name:      l.Name,
 		Color:     l.Color,
-		CreatedAt: l.CreatedAt,
+		CreatedAt: l.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
 	}
 }
 

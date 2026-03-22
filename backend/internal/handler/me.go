@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/daily-dashboard/backend/internal/middleware"
+	"github.com/daily-dashboard/backend/internal/response"
 )
 
 // MeHandler serves GET /api/auth/me — returns the current user from the session cookie.
@@ -21,13 +21,10 @@ func (h *MeHandler) AddRoutes(r chi.Router) {
 func (h *MeHandler) Get(w http.ResponseWriter, r *http.Request) {
 	sess, ok := middleware.SessionFromContext(r.Context())
 	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":"unauthorized"}`))
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	response.WriteJSON(w, http.StatusOK, map[string]string{
 		"user_id":    sess.UserID,
 		"email":      sess.Email,
 		"name":       sess.Name,

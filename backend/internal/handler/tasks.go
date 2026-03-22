@@ -11,8 +11,10 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/go-playground/validator/v10"
 
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
 	"github.com/daily-dashboard/backend/internal/middleware"
 	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -38,59 +40,56 @@ func (h *TasksHandler) AddRoutes(r chi.Router) {
 func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	tasks, err := h.service.List(r.Context(), userID)
 	if err != nil {
 		slog.Error("failed to list tasks", "error", err, "user_id", userID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasksToResponse(tasks))
+	response.WriteJSON(w, http.StatusOK, tasksToResponse(tasks))
 }
 
 func (h *TasksHandler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096) // 4 KB is generous for these small JSON bodies
 	var req CreateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	task, err := h.service.Create(r.Context(), userID, req.Text, req.Priority)
 	if err != nil {
-		if errors.Is(err, service.ErrTaskValidation) {
-			http.Error(w, "invalid request body", http.StatusBadRequest)
+		if errors.Is(err, apperrors.ErrTaskValidation) {
+			response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		} else {
 			slog.Error("failed to create task", "error", err, "user_id", userID)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(taskToResponse(task))
+	response.WriteJSON(w, http.StatusCreated, taskToResponse(task))
 }
 
 func (h *TasksHandler) Update(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
@@ -98,45 +97,44 @@ func (h *TasksHandler) Update(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 4096) // 4 KB is generous for these small JSON bodies
 	var req UpdateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	task, err := h.service.Update(r.Context(), id, userID, req.Done, req.Text, req.Priority)
 	if err != nil {
-		if errors.Is(err, service.ErrTaskNotFound) {
-			http.Error(w, "task not found", http.StatusNotFound)
-		} else if errors.Is(err, service.ErrTaskValidation) {
-			http.Error(w, "invalid request body", http.StatusBadRequest)
+		if errors.Is(err, apperrors.ErrTaskNotFound) {
+			response.WriteError(w, http.StatusNotFound, "task not found")
+		} else if errors.Is(err, apperrors.ErrTaskValidation) {
+			response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		} else {
 			slog.Error("failed to update task", "error", err, "user_id", userID, "task_id", id)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(taskToResponse(task))
+	response.WriteJSON(w, http.StatusOK, taskToResponse(task))
 }
 
 func (h *TasksHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	id := chi.URLParam(r, "id")
 	if err := h.service.Delete(r.Context(), id, userID); err != nil {
-		if errors.Is(err, service.ErrTaskNotFound) {
-			http.Error(w, "task not found", http.StatusNotFound)
+		if errors.Is(err, apperrors.ErrTaskNotFound) {
+			response.WriteError(w, http.StatusNotFound, "task not found")
 		} else {
 			slog.Error("failed to delete task", "error", err, "user_id", userID, "task_id", id)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
@@ -151,12 +149,6 @@ func userIDFromRequest(r *http.Request) (string, bool) {
 		return "", false
 	}
 	return sess.UserID, true
-}
-
-func writeUnauthorized(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte(`{"error":"unauthorized"}`))
 }
 
 func taskToResponse(t model.Task) TaskResponse {

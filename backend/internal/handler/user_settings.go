@@ -11,8 +11,9 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/go-playground/validator/v10"
 
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
 	"github.com/daily-dashboard/backend/internal/model"
-	"github.com/daily-dashboard/backend/internal/repository"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -38,40 +39,39 @@ func (h *UserSettingsHandler) AddRoutes(r chi.Router) {
 func (h *UserSettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	settings, err := h.service.Get(r.Context(), userID)
 	if err != nil {
 		slog.Error("failed to get user settings", "error", err, "user_id", userID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(settingsToResponse(settings))
+	response.WriteJSON(w, http.StatusOK, settingsToResponse(settings))
 }
 
 func (h *UserSettingsHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var req UpsertSettingsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	upsert := repository.UserSettingsUpsert{
+	upsert := model.UserSettingsUpsert{
 		Latitude:       req.Latitude,
 		Longitude:      req.Longitude,
 		CalendarICSURL: req.CalendarICSURL,
@@ -80,37 +80,36 @@ func (h *UserSettingsHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := h.service.Upsert(r.Context(), userID, upsert)
 	if err != nil {
-		if errors.Is(err, service.ErrSettingsValidation) {
-			http.Error(w, "invalid request body", http.StatusBadRequest)
+		if errors.Is(err, apperrors.ErrSettingsValidation) {
+			response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		} else {
 			slog.Error("failed to upsert user settings", "error", err, "user_id", userID)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(settingsModelToResponse(settings))
+	response.WriteJSON(w, http.StatusOK, settingsModelToResponse(settings))
 }
 
 func (h *UserSettingsHandler) GetNewsCategories(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	available, err := h.service.ListAllCategories(r.Context())
 	if err != nil {
 		slog.Error("failed to list all news categories", "error", err, "user_id", userID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
 	selected, err := h.service.ListSelectedCategories(r.Context(), userID)
 	if err != nil {
 		slog.Error("failed to list selected news categories", "error", err, "user_id", userID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
@@ -119,34 +118,33 @@ func (h *UserSettingsHandler) GetNewsCategories(w http.ResponseWriter, r *http.R
 		Selected:  categoriesToResponse(selected),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	response.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *UserSettingsHandler) SetNewsCategories(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromRequest(r)
 	if !ok {
-		writeUnauthorized(w)
+		response.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var req SetNewsCategoriesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.validate.Struct(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		response.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.service.SetSelectedCategories(r.Context(), userID, req.CategoryIDs); err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
-			http.Error(w, "invalid category id", http.StatusBadRequest)
+		if errors.Is(err, apperrors.ErrCategoryNotFound) {
+			response.WriteError(w, http.StatusBadRequest, "invalid category id")
 		} else {
 			slog.Error("failed to set news categories", "error", err, "user_id", userID)
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		}
 		return
 	}

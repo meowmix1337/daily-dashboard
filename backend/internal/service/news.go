@@ -2,24 +2,23 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"time"
 
+	"github.com/daily-dashboard/backend/internal/httpclient"
 	"github.com/daily-dashboard/backend/internal/model"
 )
 
 // NewsService fetches top headlines from GNews.
 type NewsService struct {
-	httpClient *http.Client
+	httpClient httpclient.HTTPClient
 	apiKey     string
 	cache      *CacheService
 }
 
 // NewNewsService creates a new NewsService.
-func NewNewsService(httpClient *http.Client, apiKey string, cache *CacheService) *NewsService {
+func NewNewsService(httpClient httpclient.HTTPClient, apiKey string, cache *CacheService) *NewsService {
 	return &NewsService{
 		httpClient: httpClient,
 		apiKey:     apiKey,
@@ -74,30 +73,13 @@ func (s *NewsService) fetchAllCategories(ctx context.Context) ([]model.NewsCateg
 }
 
 func (s *NewsService) fetchCategory(ctx context.Context, category string) ([]model.NewsItem, error) {
-	url := fmt.Sprintf(
+	u := fmt.Sprintf(
 		"https://gnews.io/api/v4/top-headlines?category=%s&country=us&lang=en&max=8&apikey=%s",
 		category, s.apiKey,
 	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := readBody(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("gnews: status %d for category %s: %s", resp.StatusCode, category, body)
-	}
 
 	var gnewsResp gNewsResponse
-	if err := json.Unmarshal(body, &gnewsResp); err != nil {
+	if err := s.httpClient.Get(ctx, u, &gnewsResp); err != nil {
 		return nil, err
 	}
 
