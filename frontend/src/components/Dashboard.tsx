@@ -276,7 +276,7 @@ export default function Dashboard(): React.ReactElement {
         );
       case 'tasks':
         return data?.tasks ? (
-          <TasksCard tasks={data.tasks} delay={0.4} noGridSpan />
+          <TasksCard tasks={data.tasks} tasksTotal={data.tasksTotal} delay={0.4} noGridSpan />
         ) : (
           <CardSkeleton span={1} rows={5} />
         );

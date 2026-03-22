@@ -3,10 +3,12 @@ import type { Task } from '../types/dashboard';
 import { Card } from './ui/Card';
 import { CardHeader } from './ui/CardHeader';
 import { useTasks } from '../hooks/useTasks';
+import { fetchTasksPage } from '../api/client';
 import { useLabels, useLabelMutations, useTaskLabels } from '../hooks/useLabels';
 
 interface TasksCardProps {
   tasks: Task[];
+  tasksTotal?: number;
   delay?: number;
   noGridSpan?: boolean;
 }
@@ -34,11 +36,56 @@ const COLOR_PRESETS = [
   '#06b6d4',
 ];
 
-export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
+export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
   const { toggle, create, remove } = useTasks();
   const { labels } = useLabels();
   const { createLabel, deleteLabel, assignLabel, removeLabel } = useLabelMutations();
-  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+
+  // Infinite scroll state
+  const [extraTasks, setExtraTasks] = useState<Task[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
+
+  // Merge first-page tasks with extra pages, deduplicating by ID
+  const allTasks = useMemo(() => {
+    const seenIds = new Set(tasks.map((t) => t.id));
+    return [...tasks, ...extraTasks.filter((t) => !seenIds.has(t.id))];
+  }, [tasks, extraTasks]);
+
+  const totalCount = tasksTotal ?? tasks.length;
+  const hasMore = allTasks.length < totalCount;
+
+  // loadMore kept in a ref so the IntersectionObserver callback never goes stale
+  const loadMoreRef = useRef<() => void>(() => undefined);
+  loadMoreRef.current = () => {
+    if (isLoadingMoreRef.current || !hasMore) return;
+    isLoadingMoreRef.current = true;
+    setIsLoadingMore(true);
+    fetchTasksPage(25, allTasks.length)
+      .then((result) => {
+        setExtraTasks((prev) => [...prev, ...result.tasks]);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        isLoadingMoreRef.current = false;
+        setIsLoadingMore(false);
+      });
+  };
+
+  // Observe sentinel at the bottom of the task list
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMoreRef.current(); },
+      { rootMargin: '120px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const taskIds = useMemo(() => allTasks.map((t) => t.id), [allTasks]);
   const taskLabelsMap = useTaskLabels(taskIds);
 
   const [newText, setNewText] = useState('');
@@ -85,20 +132,20 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
 
   // Filter tasks by active label
   const visibleTasks = activeFilterLabel
-    ? tasks.filter((t) => {
+    ? allTasks.filter((t) => {
         const tLabels = taskLabelsMap.get(t.id) ?? [];
         return tLabels.some((l) => l.id === activeFilterLabel);
       })
-    : tasks;
+    : allTasks;
 
-  const doneCount = tasks.filter((t) => t.done).length;
+  const doneCount = allTasks.filter((t) => t.done).length;
 
   return (
     <Card delay={delay} noGridSpan={noGridSpan}>
       <CardHeader
         icon="◉"
         title="Tasks"
-        badge={`${doneCount}/${tasks.length} done`}
+        badge={`${doneCount}/${totalCount} done`}
       />
 
       {/* Label filter bar */}
@@ -365,6 +412,15 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
             </div>
           );
         })}
+      </div>
+
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} style={{ paddingTop: 4 }}>
+        {isLoadingMore && (
+          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>
+            Loading more...
+          </div>
+        )}
       </div>
 
       {/* Add task form */}

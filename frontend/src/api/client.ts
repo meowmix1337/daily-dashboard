@@ -61,6 +61,17 @@ export function searchSymbols(query: string): Promise<{ results: SymbolSearchRes
   return apiFetch<{ results: SymbolSearchResult[] }>(`/stocks/search?q=${encodeURIComponent(query)}`);
 }
 
+export interface TasksPageResponse {
+  tasks: Task[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export function fetchTasksPage(limit: number, offset: number): Promise<TasksPageResponse> {
+  return apiFetch<TasksPageResponse>(`/tasks?limit=${limit}&offset=${offset}`);
+}
+
 export function deleteTask(id: string): Promise<void> {
   return apiFetch(`/tasks/${id}`, { method: 'DELETE' }).then(() => undefined);
 }
