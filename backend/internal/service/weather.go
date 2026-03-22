@@ -2,11 +2,10 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
+	"github.com/daily-dashboard/backend/internal/httpclient"
 	"github.com/daily-dashboard/backend/internal/model"
 )
 
@@ -47,14 +46,14 @@ func wmoToCondition(code int) (string, string) {
 
 // WeatherService fetches weather data from Open-Meteo.
 type WeatherService struct {
-	httpClient *http.Client
+	httpClient httpclient.HTTPClient
 	cache      *CacheService
 	lat        float64
 	lon        float64
 }
 
 // NewWeatherService creates a new WeatherService.
-func NewWeatherService(httpClient *http.Client, cache *CacheService, lat, lon float64) *WeatherService {
+func NewWeatherService(httpClient httpclient.HTTPClient, cache *CacheService, lat, lon float64) *WeatherService {
 	return &WeatherService{
 		httpClient: httpClient,
 		cache:      cache,
@@ -92,7 +91,7 @@ func (s *WeatherService) fetchFromAPI(ctx context.Context) (model.WeatherData, e
 	)
 
 	var forecast openMeteoForecast
-	if err := s.get(ctx, forecastURL, &forecast); err != nil {
+	if err := s.httpClient.Get(ctx, forecastURL, &forecast); err != nil {
 		return model.WeatherData{}, err
 	}
 
@@ -102,7 +101,7 @@ func (s *WeatherService) fetchFromAPI(ctx context.Context) (model.WeatherData, e
 		s.lat, s.lon,
 	)
 	var aqiResp openMeteoAQI
-	_ = s.get(ctx, aqiURL, &aqiResp) // AQI is optional
+	_ = s.httpClient.Get(ctx, aqiURL, &aqiResp) // AQI is optional
 
 	condition, icon := wmoToCondition(forecast.Current.WeatherCode)
 
@@ -167,23 +166,6 @@ func (s *WeatherService) fetchFromAPI(ctx context.Context) (model.WeatherData, e
 		AQILabel:  aqiLabel,
 		Hourly:    hourly,
 	}, nil
-}
-
-func (s *WeatherService) get(ctx context.Context, url string, dst any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	body, err := readBody(resp.Body)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(body, dst)
 }
 
 func aqiCategory(aqi int) string {

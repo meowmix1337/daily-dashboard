@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
+	"github.com/daily-dashboard/backend/internal/model"
 )
 
 // sqliteTaskRow mirrors the tasks table with string timestamps for SQLite scanning.
@@ -22,25 +25,13 @@ type sqliteTaskRow struct {
 	UpdatedAt  string `db:"updated_at"`
 }
 
-
-func (r *sqliteTaskRow) toTaskRow() (TaskRow, error) {
-	createdAt, err := time.Parse(timeFormat, r.CreatedAt)
-	if err != nil {
-		return TaskRow{}, fmt.Errorf("parse created_at: %w", err)
+func (r *sqliteTaskRow) toModel() model.Task {
+	return model.Task{
+		ID:       r.ID,
+		Text:     r.Text,
+		Done:     r.Done == 1,
+		Priority: r.PriorityID,
 	}
-	updatedAt, err := time.Parse(timeFormat, r.UpdatedAt)
-	if err != nil {
-		return TaskRow{}, fmt.Errorf("parse updated_at: %w", err)
-	}
-	return TaskRow{
-		ID:         r.ID,
-		UserID:     r.UserID,
-		Text:       r.Text,
-		Done:       r.Done == 1,
-		PriorityID: r.PriorityID,
-		CreatedAt:  createdAt,
-		UpdatedAt:  updatedAt,
-	}, nil
 }
 
 // SQLiteTaskRepository implements TaskRepository backed by SQLite via sqlx.
@@ -53,7 +44,7 @@ func NewSQLiteTaskRepository(db *sqlx.DB) *SQLiteTaskRepository {
 	return &SQLiteTaskRepository{db: db}
 }
 
-func (r *SQLiteTaskRepository) List(ctx context.Context, userID string) ([]TaskRow, error) {
+func (r *SQLiteTaskRepository) List(ctx context.Context, userID string) ([]model.Task, error) {
 	var rows []sqliteTaskRow
 	err := r.db.SelectContext(ctx, &rows,
 		`SELECT id, user_id, text, done, priority_id, created_at, updated_at
@@ -72,18 +63,14 @@ func (r *SQLiteTaskRepository) List(ctx context.Context, userID string) ([]TaskR
 		return nil, fmt.Errorf("list tasks: %w", err)
 	}
 
-	result := make([]TaskRow, 0, len(rows))
+	result := make([]model.Task, 0, len(rows))
 	for i := range rows {
-		tr, err := rows[i].toTaskRow()
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, tr)
+		result = append(result, rows[i].toModel())
 	}
 	return result, nil
 }
 
-func (r *SQLiteTaskRepository) Get(ctx context.Context, id string, userID string) (TaskRow, error) {
+func (r *SQLiteTaskRepository) Get(ctx context.Context, id string, userID string) (model.Task, error) {
 	var row sqliteTaskRow
 	err := r.db.GetContext(ctx, &row,
 		`SELECT id, user_id, text, done, priority_id, created_at, updated_at
@@ -93,14 +80,14 @@ func (r *SQLiteTaskRepository) Get(ctx context.Context, id string, userID string
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return TaskRow{}, ErrTaskNotFound
+			return model.Task{}, apperrors.ErrTaskNotFound
 		}
-		return TaskRow{}, fmt.Errorf("get task: %w", err)
+		return model.Task{}, fmt.Errorf("get task: %w", err)
 	}
-	return row.toTaskRow()
+	return row.toModel(), nil
 }
 
-func (r *SQLiteTaskRepository) Create(ctx context.Context, t TaskCreate) (TaskRow, error) {
+func (r *SQLiteTaskRepository) Create(ctx context.Context, t model.TaskCreate) (model.Task, error) {
 	now := time.Now().UTC().Format(timeFormat)
 	doneInt := 0
 	if t.Done {
@@ -112,15 +99,14 @@ func (r *SQLiteTaskRepository) Create(ctx context.Context, t TaskCreate) (TaskRo
 		t.ID, t.UserID, t.Text, doneInt, t.PriorityID, now, now,
 	)
 	if err != nil {
-		return TaskRow{}, fmt.Errorf("create task: %w", err)
+		return model.Task{}, fmt.Errorf("create task: %w", err)
 	}
 	return r.Get(ctx, t.ID, t.UserID)
 }
 
-func (r *SQLiteTaskRepository) Update(ctx context.Context, id string, userID string, u TaskUpdate) error {
+func (r *SQLiteTaskRepository) Update(ctx context.Context, id string, userID string, u model.TaskUpdate) error {
 	now := time.Now().UTC().Format(timeFormat)
 
-	// Build a single UPDATE statement with all changed fields.
 	setClauses := []string{"updated_at = ?"}
 	args := []interface{}{now}
 

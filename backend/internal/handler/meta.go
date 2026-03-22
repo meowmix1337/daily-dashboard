@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -30,7 +30,7 @@ func (h *MetaHandler) Get(w http.ResponseWriter, r *http.Request) {
 	quote, quoteErr := h.quotes.Fetch(ctx)
 
 	if sunriseErr != nil && quoteErr != nil {
-		http.Error(w, "meta services unavailable", http.StatusServiceUnavailable)
+		response.WriteError(w, http.StatusServiceUnavailable, "meta services unavailable")
 		return
 	}
 
@@ -41,6 +41,5 @@ func (h *MetaHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Quote:    quote,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(meta)
+	response.WriteJSON(w, http.StatusOK, meta)
 }

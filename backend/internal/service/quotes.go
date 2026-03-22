@@ -2,23 +2,22 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
+	"github.com/daily-dashboard/backend/internal/httpclient"
 	"github.com/daily-dashboard/backend/internal/model"
 )
 
 // QuotesService fetches a daily quote from API Ninjas.
 type QuotesService struct {
-	httpClient *http.Client
+	httpClient httpclient.HTTPClient
 	apiKey     string
 	cache      *CacheService
 }
 
 // NewQuotesService creates a new QuotesService.
-func NewQuotesService(httpClient *http.Client, apiKey string, cache *CacheService) *QuotesService {
+func NewQuotesService(httpClient httpclient.HTTPClient, apiKey string, cache *CacheService) *QuotesService {
 	return &QuotesService{
 		httpClient: httpClient,
 		apiKey:     apiKey,
@@ -49,29 +48,8 @@ func (s *QuotesService) Fetch(ctx context.Context) (model.Quote, error) {
 }
 
 func (s *QuotesService) fetchFromAPI(ctx context.Context) (model.Quote, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.api-ninjas.com/v2/quotes", nil)
-	if err != nil {
-		return model.Quote{}, err
-	}
-	req.Header.Set("X-Api-Key", s.apiKey)
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return model.Quote{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return model.Quote{}, fmt.Errorf("API Ninjas quotes returned status %d", resp.StatusCode)
-	}
-
-	body, err := readBody(resp.Body)
-	if err != nil {
-		return model.Quote{}, err
-	}
-
 	var quotes []apiNinjasQuote
-	if err := json.Unmarshal(body, &quotes); err != nil {
+	if err := s.httpClient.Get(ctx, "https://api.api-ninjas.com/v2/quotes", &quotes, httpclient.WithHeader("X-Api-Key", s.apiKey)); err != nil {
 		return model.Quote{}, err
 	}
 

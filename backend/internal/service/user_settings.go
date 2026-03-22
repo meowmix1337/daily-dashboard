@@ -7,49 +7,56 @@ import (
 	"net/url"
 	"strings"
 
+	apperrors "github.com/daily-dashboard/backend/internal/errors"
 	"github.com/daily-dashboard/backend/internal/model"
-	"github.com/daily-dashboard/backend/internal/repository"
 )
 
 // ErrSettingsNotFound is returned when user settings do not exist.
-var ErrSettingsNotFound = errors.New("user settings not found")
+var ErrSettingsNotFound = apperrors.ErrSettingsNotFound
 
 // ErrSettingsValidation is returned when settings input fails validation.
-var ErrSettingsValidation = errors.New("settings validation failed")
+var ErrSettingsValidation = apperrors.ErrSettingsValidation
 
 // ErrCategoryNotFound is returned when an invalid news category ID is provided.
-var ErrCategoryNotFound = errors.New("news category not found")
+var ErrCategoryNotFound = apperrors.ErrCategoryNotFound
 
-// UserSettingsService manages user settings via a repository.
-type UserSettingsService struct {
-	repo repository.UserSettingsRepository
-	enc  *EncryptionService // nil means no encryption (dev mode)
+// UserSettingsStore defines the data-access contract for user settings.
+type UserSettingsStore interface {
+	Get(ctx context.Context, userID string) (model.UserSettings, error)
+	Upsert(ctx context.Context, userID string, u model.UserSettingsUpsert) (model.UserSettings, error)
+	ListAllCategories(ctx context.Context) ([]model.NewsCategoryType, error)
+	ListSelectedCategories(ctx context.Context, userID string) ([]model.NewsCategoryType, error)
+	SetSelectedCategories(ctx context.Context, userID string, categoryIDs []string) error
 }
 
-// NewUserSettingsService creates a new UserSettingsService backed by the given repository.
-// enc may be nil to disable encryption of sensitive fields.
-func NewUserSettingsService(repo repository.UserSettingsRepository, enc *EncryptionService) *UserSettingsService {
-	return &UserSettingsService{repo: repo, enc: enc}
+// UserSettingsService manages user settings via a store.
+type UserSettingsService struct {
+	store UserSettingsStore
+	enc   *EncryptionService
+}
+
+// NewUserSettingsService creates a new UserSettingsService backed by the given store.
+func NewUserSettingsService(store UserSettingsStore, enc *EncryptionService) *UserSettingsService {
+	return &UserSettingsService{store: store, enc: enc}
 }
 
 // Get returns the settings for the given user, or nil if no settings have been configured yet.
 func (s *UserSettingsService) Get(ctx context.Context, userID string) (*model.UserSettings, error) {
-	row, err := s.repo.Get(ctx, userID)
+	settings, err := s.store.Get(ctx, userID)
 	if err != nil {
-		if errors.Is(err, repository.ErrSettingsNotFound) {
+		if errors.Is(err, apperrors.ErrSettingsNotFound) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get user settings: %w", err)
 	}
-	m := settingsRowToModel(row)
-	if err := s.decryptSensitiveFields(&m); err != nil {
+	if err := s.decryptSensitiveFields(&settings); err != nil {
 		return nil, err
 	}
-	return &m, nil
+	return &settings, nil
 }
 
 // Upsert creates or updates settings for the given user, returning the final state.
-func (s *UserSettingsService) Upsert(ctx context.Context, userID string, u repository.UserSettingsUpsert) (model.UserSettings, error) {
+func (s *UserSettingsService) Upsert(ctx context.Context, userID string, u model.UserSettingsUpsert) (model.UserSettings, error) {
 	if u.Timezone != nil {
 		trimmed := strings.TrimSpace(*u.Timezone)
 		u.Timezone = &trimmed
@@ -74,48 +81,39 @@ func (s *UserSettingsService) Upsert(ctx context.Context, userID string, u repos
 		}
 	}
 
-	row, err := s.repo.Upsert(ctx, userID, u)
+	settings, err := s.store.Upsert(ctx, userID, u)
 	if err != nil {
 		return model.UserSettings{}, fmt.Errorf("upsert user settings: %w", err)
 	}
-	m := settingsRowToModel(row)
-	if err := s.decryptSensitiveFields(&m); err != nil {
+	if err := s.decryptSensitiveFields(&settings); err != nil {
 		return model.UserSettings{}, err
 	}
-	return m, nil
+	return settings, nil
 }
 
 // ListAllCategories returns all available news category types.
 func (s *UserSettingsService) ListAllCategories(ctx context.Context) ([]model.NewsCategoryType, error) {
-	rows, err := s.repo.ListAllCategories(ctx)
+	categories, err := s.store.ListAllCategories(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list all news categories: %w", err)
 	}
-	result := make([]model.NewsCategoryType, 0, len(rows))
-	for _, r := range rows {
-		result = append(result, categoryRowToModel(r))
-	}
-	return result, nil
+	return categories, nil
 }
 
 // ListSelectedCategories returns the news categories the user has selected.
 func (s *UserSettingsService) ListSelectedCategories(ctx context.Context, userID string) ([]model.NewsCategoryType, error) {
-	rows, err := s.repo.ListSelectedCategories(ctx, userID)
+	categories, err := s.store.ListSelectedCategories(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list selected news categories: %w", err)
 	}
-	result := make([]model.NewsCategoryType, 0, len(rows))
-	for _, r := range rows {
-		result = append(result, categoryRowToModel(r))
-	}
-	return result, nil
+	return categories, nil
 }
 
 // SetSelectedCategories replaces the user's selected news categories.
 // Returns ErrCategoryNotFound if any provided category ID does not exist.
 func (s *UserSettingsService) SetSelectedCategories(ctx context.Context, userID string, categoryIDs []string) error {
 	// Validate that all provided category IDs exist.
-	all, err := s.repo.ListAllCategories(ctx)
+	all, err := s.store.ListAllCategories(ctx)
 	if err != nil {
 		return fmt.Errorf("validate categories: %w", err)
 	}
@@ -129,7 +127,7 @@ func (s *UserSettingsService) SetSelectedCategories(ctx context.Context, userID 
 		}
 	}
 
-	if err := s.repo.SetSelectedCategories(ctx, userID, categoryIDs); err != nil {
+	if err := s.store.SetSelectedCategories(ctx, userID, categoryIDs); err != nil {
 		return fmt.Errorf("set selected categories: %w", err)
 	}
 	return nil
@@ -158,22 +156,4 @@ func (s *UserSettingsService) decryptSensitiveFields(m *model.UserSettings) erro
 		m.CalendarICSURL = &decrypted
 	}
 	return nil
-}
-
-func settingsRowToModel(r repository.UserSettingsRow) model.UserSettings {
-	return model.UserSettings{
-		ID:             r.ID,
-		Latitude:       r.Latitude,
-		Longitude:      r.Longitude,
-		CalendarICSURL: r.CalendarICSURL,
-		Timezone:       r.Timezone,
-	}
-}
-
-func categoryRowToModel(r repository.NewsCategoryTypeRow) model.NewsCategoryType {
-	return model.NewsCategoryType{
-		ID:        r.ID,
-		Label:     r.Label,
-		SortOrder: r.SortOrder,
-	}
 }

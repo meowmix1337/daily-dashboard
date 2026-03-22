@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -10,6 +9,7 @@ import (
 
 	"github.com/daily-dashboard/backend/internal/middleware"
 	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/daily-dashboard/backend/internal/response"
 	"github.com/daily-dashboard/backend/internal/service"
 )
 
@@ -130,6 +130,5 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// errgroup.Wait() will not return a non-nil error since we always return nil
 	_ = g.Wait()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	response.WriteJSON(w, http.StatusOK, resp)
 }

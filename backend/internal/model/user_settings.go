@@ -15,3 +15,11 @@ type NewsCategoryType struct {
 	Label     string `json:"label"`
 	SortOrder int    `json:"sort_order"`
 }
+
+// UserSettingsUpsert holds mutable fields for creating or updating user settings.
+type UserSettingsUpsert struct {
+	Latitude       *float64
+	Longitude      *float64
+	CalendarICSURL *string
+	Timezone       *string
+}

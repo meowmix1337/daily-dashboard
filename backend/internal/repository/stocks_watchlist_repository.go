@@ -1,30 +1,14 @@
 package repository
 
-import (
-	"context"
-	"errors"
-)
-
-// ErrSymbolNotFound is returned when a watchlist symbol does not exist.
-var ErrSymbolNotFound = errors.New("symbol not found in watchlist")
-
-// WatchlistRow represents a single row in the stocks_watchlist table.
-type WatchlistRow struct {
-	ID        string `db:"id"`
-	UserID    string `db:"user_id"`
-	Symbol    string `db:"symbol"`
-	CreatedAt string `db:"created_at"`
-	UpdatedAt string `db:"updated_at"`
-}
+import "context"
 
 // StocksWatchlistRepository defines the data-access contract for the stocks watchlist.
 type StocksWatchlistRepository interface {
-	// List returns all active (non-deleted) symbols for the given user.
-	List(ctx context.Context, userID string) ([]WatchlistRow, error)
-	// Get returns the active watchlist row for the given user and symbol.
-	// Returns sql.ErrNoRows if not found.
-	Get(ctx context.Context, userID string, symbol string) (WatchlistRow, error)
-	// Add inserts or re-activates a symbol for the given user (UPSERT).
+	// ListSymbols returns all active symbol strings for the given user.
+	ListSymbols(ctx context.Context, userID string) ([]string, error)
+	// Exists checks whether the given symbol is in the user's active watchlist.
+	Exists(ctx context.Context, userID string, symbol string) (bool, error)
+	// Add inserts or re-activates a symbol for the given user.
 	Add(ctx context.Context, userID string, symbol string) error
 	// Remove soft-deletes a symbol for the given user.
 	Remove(ctx context.Context, userID string, symbol string) error

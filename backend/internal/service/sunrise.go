@@ -2,22 +2,22 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
+
+	"github.com/daily-dashboard/backend/internal/httpclient"
 )
 
 // SunriseService fetches sunrise/sunset data from sunrise-sunset.org.
 type SunriseService struct {
-	httpClient *http.Client
+	httpClient httpclient.HTTPClient
 	cache      *CacheService
 	lat        float64
 	lon        float64
 }
 
 // NewSunriseService creates a new SunriseService.
-func NewSunriseService(httpClient *http.Client, cache *CacheService, lat, lon float64) *SunriseService {
+func NewSunriseService(httpClient httpclient.HTTPClient, cache *CacheService, lat, lon float64) *SunriseService {
 	return &SunriseService{
 		httpClient: httpClient,
 		cache:      cache,
@@ -52,29 +52,13 @@ type sunriseResult struct {
 }
 
 func (s *SunriseService) fetchFromAPI(ctx context.Context) (string, string, string, error) {
-	url := fmt.Sprintf(
+	u := fmt.Sprintf(
 		"https://api.sunrise-sunset.org/json?lat=%f&lng=%f&formatted=0",
 		s.lat, s.lon,
 	)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return "", "", "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := readBody(resp.Body)
-	if err != nil {
-		return "", "", "", err
-	}
-
 	var apiResp sunriseSunsetResponse
-	if err := json.Unmarshal(body, &apiResp); err != nil {
+	if err := s.httpClient.Get(ctx, u, &apiResp); err != nil {
 		return "", "", "", err
 	}
 
