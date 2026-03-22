@@ -8,10 +8,12 @@ A personal daily life dashboard with a Go backend and React/TypeScript frontend.
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Go 1.23 + chi router |
+| Backend | Go 1.26 + chi router |
 | Frontend | React 19 + TypeScript + Vite 6 |
 | Styling | Tailwind CSS 4 |
 | State | TanStack Query v5 |
+| Database | SQLite (via sqlx + goose migrations) |
+| Auth | Google OAuth 2.0 |
 | Containers | Docker + Docker Compose v2 |
 | Proxy | Nginx 1.27 |
 
@@ -94,32 +96,62 @@ The calendar card reads any standard ICS/iCal feed — no OAuth required.
 
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
-| `GNEWS_API_KEY` | GNews API key for headlines | Optional | — (unavailable state) |
-| `FINNHUB_API_KEY` | Finnhub API key for stocks | Optional | — (unavailable state) |
-| `API_NINJAS_API_KEY` | API Ninjas key for daily quote | Optional | — (unavailable state) |
-| `CALENDAR_ICS_URL` | Private ICS URL for calendar events | Optional | — (unavailable state) |
+| `ENCRYPTION_KEY` | AES-256 key for encrypting sensitive user settings. Generate with `openssl rand -hex 32` | **Yes** | — |
+| `GNEWS_API_KEY` | GNews API key for headlines | No | — (unavailable state) |
+| `FINNHUB_API_KEY` | Finnhub API key for stocks | No | — (unavailable state) |
+| `API_NINJAS_API_KEY` | API Ninjas key for daily quote | No | — (unavailable state) |
+| `CALENDAR_ICS_URL` | Private ICS URL for calendar events (stored encrypted) | No | — (unavailable state) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | No | — (auth disabled) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | No | — (auth disabled) |
+| `GOOGLE_CALLBACK_URL` | OAuth redirect URL (e.g. `http://localhost:8080/auth/google/callback`) | No | — |
+| `SESSION_KEY` | Secret for signing session cookies | No | random (insecure for prod) |
 | `LATITUDE` | Your location latitude | No | 37.7749 (SF) |
 | `LONGITUDE` | Your location longitude | No | -122.4194 (SF) |
 | `TIMEZONE` | IANA timezone for calendar date filtering (e.g. `America/New_York`) | No | server local (UTC in Docker) |
 | `PORT` | Backend server port | No | 8080 |
-| `CORS_ORIGIN` | Allowed CORS origin for the API (set to your frontend URL in production) | No | `http://localhost:5173` |
-| `ENCRYPTION_KEY` | AES-256 key for encrypting sensitive fields (e.g. calendar ICS URLs). Generate with `openssl rand -hex 32` | **Yes** | — |
+| `CORS_ORIGIN` | Allowed CORS origin for the API | No | `http://localhost:5173` |
+| `FRONTEND_URL` | Frontend URL for OAuth redirects | No | `http://localhost:5173` |
+| `SECURE_COOKIES` | Set `true` in production (HTTPS only cookies) | No | false |
 
 ## API Endpoints
 
+### Public
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | Health check |
+| GET | `/auth/google` | Initiate Google OAuth flow |
+| GET | `/auth/google/callback` | OAuth callback |
+| POST | `/auth/logout` | Clear session |
+
+### Protected (requires auth session)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/me` | Current user info |
 | GET | `/api/dashboard` | All data aggregated |
 | GET | `/api/weather` | Current weather + forecast |
-| GET | `/api/news` | Top headlines |
+| GET | `/api/news` | Top headlines by category |
 | GET | `/api/stocks` | Stock + crypto quotes |
+| GET | `/api/stocks/symbols` | Watchlist symbols |
+| POST | `/api/stocks/symbols` | Add symbol to watchlist |
+| DELETE | `/api/stocks/symbols/{symbol}` | Remove symbol |
+| GET | `/api/stocks/symbols/search` | Search Finnhub symbols |
 | GET | `/api/calendar` | Today's events |
+| GET | `/api/meta` | Sunrise/sunset + daily quote |
 | GET | `/api/tasks` | Task list |
 | POST | `/api/tasks` | Create task |
-| PATCH | `/api/tasks/{id}` | Toggle task done |
+| PATCH | `/api/tasks/{id}` | Update task |
 | DELETE | `/api/tasks/{id}` | Delete task |
-| GET | `/api/meta` | Sunrise/sunset + quote |
+| GET | `/api/labels` | All user labels |
+| POST | `/api/labels` | Create label |
+| PATCH | `/api/labels/{id}` | Update label |
+| DELETE | `/api/labels/{id}` | Delete label |
+| GET | `/api/tasks/{taskID}/labels` | Labels on a task |
+| POST | `/api/tasks/{taskID}/labels` | Assign label to task |
+| DELETE | `/api/tasks/{taskID}/labels/{labelID}` | Remove label from task |
+| GET | `/api/settings` | User settings |
+| PUT | `/api/settings` | Update user settings |
+| GET | `/api/settings/news-categories` | Available + selected news categories |
+| PUT | `/api/settings/news-categories` | Set selected news categories |
 
 ## Project Structure
 
@@ -127,13 +159,19 @@ The calendar card reads any standard ICS/iCal feed — no OAuth required.
 daily-dashboard/
 ├── backend/
 │   ├── cmd/server/main.go        # Entrypoint
+│   ├── db/migrations/            # goose SQL migrations
 │   └── internal/
 │       ├── config/config.go      # Env config
-│       ├── handler/              # HTTP handlers
-│       ├── middleware/           # CORS + logging
-│       ├── model/models.go       # Shared types
-│       ├── server/server.go      # Router + wiring
-│       └── service/              # Business logic + API clients
+│       ├── errors/errors.go      # Sentinel domain errors
+│       ├── handler/              # HTTP handlers + DTOs
+│       ├── httpclient/           # HTTPClient interface + wrapper
+│       ├── middleware/           # CORS, auth, logging
+│       ├── model/                # Domain types (shared across layers)
+│       ├── repository/           # SQLite data access (implements service interfaces)
+│       ├── response/             # WriteJSON / WriteError helpers
+│       ├── server/server.go      # Router + dependency wiring
+│       ├── service/              # Business logic + external API clients
+│       └── validate/             # Shared validator instance
 ├── frontend/
 │   └── src/
 │       ├── api/client.ts         # API fetch wrapper
