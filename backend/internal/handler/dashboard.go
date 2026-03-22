@@ -7,10 +7,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/daily-dashboard/backend/internal/middleware"
-	"github.com/daily-dashboard/backend/internal/model"
-	"github.com/daily-dashboard/backend/internal/response"
-	"github.com/daily-dashboard/backend/internal/service"
+	"github.com/meowmix1337/argus/backend/internal/middleware"
+	"github.com/meowmix1337/argus/backend/internal/model"
+	"github.com/meowmix1337/argus/backend/internal/response"
+	"github.com/meowmix1337/argus/backend/internal/service"
 )
 
 // DashboardHandler aggregates all widget data into a single response.

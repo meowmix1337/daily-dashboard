@@ -12,8 +12,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/daily-dashboard/backend/internal/service"
-	"github.com/daily-dashboard/backend/internal/session"
+	"github.com/meowmix1337/argus/backend/internal/service"
+	"github.com/meowmix1337/argus/backend/internal/session"
 )
 
 const sessionMaxAge = int(7 * 24 * time.Hour / time.Second) // 7 days in seconds

@@ -10,8 +10,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	apperrors "github.com/daily-dashboard/backend/internal/errors"
-	"github.com/daily-dashboard/backend/internal/model"
+	apperrors "github.com/meowmix1337/argus/backend/internal/errors"
+	"github.com/meowmix1337/argus/backend/internal/model"
 )
 
 // sqliteTaskLabelRow mirrors the task_labels table with string timestamps for SQLite scanning.

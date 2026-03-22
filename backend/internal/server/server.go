@@ -8,14 +8,14 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/daily-dashboard/backend/internal/config"
-	"github.com/daily-dashboard/backend/internal/handler"
-	"github.com/daily-dashboard/backend/internal/httpclient"
-	"github.com/daily-dashboard/backend/internal/middleware"
-	"github.com/daily-dashboard/backend/internal/repository"
-	"github.com/daily-dashboard/backend/internal/response"
-	"github.com/daily-dashboard/backend/internal/service"
-	"github.com/daily-dashboard/backend/internal/validate"
+	"github.com/meowmix1337/argus/backend/internal/config"
+	"github.com/meowmix1337/argus/backend/internal/handler"
+	"github.com/meowmix1337/argus/backend/internal/httpclient"
+	"github.com/meowmix1337/argus/backend/internal/middleware"
+	"github.com/meowmix1337/argus/backend/internal/repository"
+	"github.com/meowmix1337/argus/backend/internal/response"
+	"github.com/meowmix1337/argus/backend/internal/service"
+	"github.com/meowmix1337/argus/backend/internal/validate"
 )
 
 // Server holds the HTTP router and all dependencies.

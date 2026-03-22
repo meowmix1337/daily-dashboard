@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/daily-dashboard/backend/internal/model"
+	"github.com/meowmix1337/argus/backend/internal/model"
 )
 
 // UserSettingsRepository defines the data-access contract for user settings.

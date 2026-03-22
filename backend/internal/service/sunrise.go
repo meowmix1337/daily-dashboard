@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daily-dashboard/backend/internal/httpclient"
+	"github.com/meowmix1337/argus/backend/internal/httpclient"
 )
 
 // SunriseService fetches sunrise/sunset data from sunrise-sunset.org.

@@ -9,9 +9,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	apperrors "github.com/daily-dashboard/backend/internal/errors"
-	"github.com/daily-dashboard/backend/internal/httpclient"
-	"github.com/daily-dashboard/backend/internal/model"
+	apperrors "github.com/meowmix1337/argus/backend/internal/errors"
+	"github.com/meowmix1337/argus/backend/internal/httpclient"
+	"github.com/meowmix1337/argus/backend/internal/model"
 )
 
 // ErrSymbolNotFound is returned when a watchlist symbol does not exist.

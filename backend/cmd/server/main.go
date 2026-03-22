@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/daily-dashboard/backend/internal/config"
-	"github.com/daily-dashboard/backend/internal/database"
-	"github.com/daily-dashboard/backend/internal/server"
-	"github.com/daily-dashboard/backend/internal/service"
+	"github.com/meowmix1337/argus/backend/internal/config"
+	"github.com/meowmix1337/argus/backend/internal/database"
+	"github.com/meowmix1337/argus/backend/internal/server"
+	"github.com/meowmix1337/argus/backend/internal/service"
 )
 
 func main() {
