@@ -45,6 +45,7 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
   const [extraTasks, setExtraTasks] = useState<Task[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const isLoadingMoreRef = useRef(false);
 
@@ -80,13 +81,15 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
       });
   };
 
-  // Observe sentinel at the bottom of the task list
+  // Observe sentinel at the bottom of the task list.
+  // root is the scroll container so intersection is measured relative to the
+  // clipped viewport of that div, not the browser viewport.
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) loadMoreRef.current(); },
-      { threshold: 0 },
+      { root: scrollContainerRef.current, threshold: 0 },
     );
     observerRef.current = observer;
     observer.observe(el);
@@ -211,8 +214,24 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
         </div>
       )}
 
-      {/* Task list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Scrollable task list — capped height so the card never grows unbounded */}
+      <div
+        ref={scrollContainerRef}
+        style={{
+          maxHeight: 'min(320px, 40vh)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // Thin scrollbar: WebKit thumb blends with the glass-morphism palette
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(99,102,241,0.25) transparent',
+          // Bottom fade mask signals there is more content below
+          WebkitMaskImage: 'linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)',
+          maskImage: 'linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)',
+          paddingBottom: 8,
+          marginBottom: -4,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {visibleTasks.map((task) => {
           const tLabels = taskLabelsMap.get(task.id) ?? [];
           const isPickerOpen = labelPickerTaskId === task.id;
@@ -423,16 +442,18 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
             </div>
           );
         })}
-      </div>
+        </div>
 
-      {/* Infinite scroll sentinel */}
-      <div ref={sentinelRef} style={{ paddingTop: 4 }}>
-        {isLoadingMore && (
-          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>
-            Loading more...
-          </div>
-        )}
-      </div>
+        {/* Infinite scroll sentinel — lives inside the scroll container so the
+            IntersectionObserver (root = scroll container) fires correctly */}
+        <div ref={sentinelRef} style={{ paddingTop: 4 }}>
+          {isLoadingMore && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>
+              Loading more...
+            </div>
+          )}
+        </div>
+      </div>{/* end scroll container */}
 
       {/* Add task form */}
       <div style={{
