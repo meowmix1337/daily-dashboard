@@ -37,12 +37,28 @@ const COLOR_PRESETS = [
 ];
 
 export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
-  const { toggle, create, remove } = useTasks();
+  const { toggle: toggleMutation, create, remove: removeMutation } = useTasks();
   const { labels } = useLabels();
   const { createLabel, deleteLabel, assignLabel, removeLabel } = useLabelMutations();
 
   // Infinite scroll state
   const [extraTasks, setExtraTasks] = useState<Task[]>([]);
+
+  // Wrap toggle/remove to also update extraTasks, which lives outside React Query
+  const toggle = {
+    ...toggleMutation,
+    mutate: (vars: { id: string; done: boolean }) => {
+      toggleMutation.mutate(vars);
+      setExtraTasks((prev) => prev.map((t) => (t.id === vars.id ? { ...t, done: vars.done } : t)));
+    },
+  };
+  const remove = {
+    ...removeMutation,
+    mutate: (id: string) => {
+      removeMutation.mutate(id);
+      setExtraTasks((prev) => prev.filter((t) => t.id !== id));
+    },
+  };
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
