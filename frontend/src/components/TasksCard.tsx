@@ -3,10 +3,12 @@ import type { Task } from '../types/dashboard';
 import { Card } from './ui/Card';
 import { CardHeader } from './ui/CardHeader';
 import { useTasks } from '../hooks/useTasks';
+import { fetchTasksPage } from '../api/client';
 import { useLabels, useLabelMutations, useTaskLabels } from '../hooks/useLabels';
 
 interface TasksCardProps {
   tasks: Task[];
+  tasksTotal?: number;
   delay?: number;
   noGridSpan?: boolean;
 }
@@ -34,11 +36,86 @@ const COLOR_PRESETS = [
   '#06b6d4',
 ];
 
-export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
-  const { toggle, create, remove } = useTasks();
+export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: TasksCardProps): React.ReactElement {
+  const { toggle: toggleMutation, create, remove: removeMutation } = useTasks();
   const { labels } = useLabels();
   const { createLabel, deleteLabel, assignLabel, removeLabel } = useLabelMutations();
-  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+
+  // Infinite scroll state
+  const [extraTasks, setExtraTasks] = useState<Task[]>([]);
+
+  // Wrap toggle/remove to also update extraTasks, which lives outside React Query
+  const toggle = {
+    ...toggleMutation,
+    mutate: (vars: { id: string; done: boolean }) => {
+      toggleMutation.mutate(vars);
+      setExtraTasks((prev) => prev.map((t) => (t.id === vars.id ? { ...t, done: vars.done } : t)));
+    },
+  };
+  const remove = {
+    ...removeMutation,
+    mutate: (id: string) => {
+      removeMutation.mutate(id);
+      setExtraTasks((prev) => prev.filter((t) => t.id !== id));
+    },
+  };
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const isLoadingMoreRef = useRef(false);
+
+  // Merge first-page tasks with extra pages, deduplicating by ID
+  const allTasks = useMemo(() => {
+    const seenIds = new Set(tasks.map((t) => t.id));
+    return [...tasks, ...extraTasks.filter((t) => !seenIds.has(t.id))];
+  }, [tasks, extraTasks]);
+
+  const totalCount = tasksTotal ?? tasks.length;
+  const hasMore = allTasks.length < totalCount;
+
+  // loadMore kept in a ref so the IntersectionObserver callback never goes stale
+  const loadMoreRef = useRef<() => void>(() => undefined);
+  loadMoreRef.current = () => {
+    if (isLoadingMoreRef.current || !hasMore) return;
+    isLoadingMoreRef.current = true;
+    setIsLoadingMore(true);
+    fetchTasksPage(5, allTasks.length)
+      .then((result) => {
+        setExtraTasks((prev) => [...prev, ...result.tasks]);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        isLoadingMoreRef.current = false;
+        setIsLoadingMore(false);
+        // Re-register the sentinel so the observer fires again if it's still visible
+        const el = sentinelRef.current;
+        if (el && observerRef.current) {
+          observerRef.current.unobserve(el);
+          observerRef.current.observe(el);
+        }
+      });
+  };
+
+  // Observe sentinel at the bottom of the task list.
+  // root is the scroll container so intersection is measured relative to the
+  // clipped viewport of that div, not the browser viewport.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMoreRef.current(); },
+      { root: scrollContainerRef.current, threshold: 0 },
+    );
+    observerRef.current = observer;
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      observerRef.current = null;
+    };
+  }, []);
+
+  const taskIds = useMemo(() => allTasks.map((t) => t.id), [allTasks]);
   const taskLabelsMap = useTaskLabels(taskIds);
 
   const [newText, setNewText] = useState('');
@@ -85,20 +162,20 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
 
   // Filter tasks by active label
   const visibleTasks = activeFilterLabel
-    ? tasks.filter((t) => {
+    ? allTasks.filter((t) => {
         const tLabels = taskLabelsMap.get(t.id) ?? [];
         return tLabels.some((l) => l.id === activeFilterLabel);
       })
-    : tasks;
+    : allTasks;
 
-  const doneCount = tasks.filter((t) => t.done).length;
+  const doneCount = allTasks.filter((t) => t.done).length;
 
   return (
     <Card delay={delay} noGridSpan={noGridSpan}>
       <CardHeader
         icon="◉"
         title="Tasks"
-        badge={`${doneCount}/${tasks.length} done`}
+        badge={`${doneCount}/${totalCount} done`}
       />
 
       {/* Label filter bar */}
@@ -153,8 +230,24 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
         </div>
       )}
 
-      {/* Task list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Scrollable task list — capped height so the card never grows unbounded */}
+      <div
+        ref={scrollContainerRef}
+        style={{
+          maxHeight: 'min(320px, 40vh)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // Thin scrollbar: WebKit thumb blends with the glass-morphism palette
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(99,102,241,0.25) transparent',
+          // Bottom fade mask signals there is more content below
+          WebkitMaskImage: 'linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)',
+          maskImage: 'linear-gradient(to bottom, black calc(100% - 24px), transparent 100%)',
+          paddingBottom: 8,
+          marginBottom: -4,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {visibleTasks.map((task) => {
           const tLabels = taskLabelsMap.get(task.id) ?? [];
           const isPickerOpen = labelPickerTaskId === task.id;
@@ -365,7 +458,18 @@ export function TasksCard({ tasks, delay = 0, noGridSpan = false }: TasksCardPro
             </div>
           );
         })}
-      </div>
+        </div>
+
+        {/* Infinite scroll sentinel — lives inside the scroll container so the
+            IntersectionObserver (root = scroll container) fires correctly */}
+        <div ref={sentinelRef} style={{ paddingTop: 4 }}>
+          {isLoadingMore && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', padding: '4px 0' }}>
+              Loading more...
+            </div>
+          )}
+        </div>
+      </div>{/* end scroll container */}
 
       {/* Add task form */}
       <div style={{

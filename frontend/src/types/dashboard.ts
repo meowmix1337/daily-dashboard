@@ -73,6 +73,7 @@ export interface DashboardResponse {
   weather: WeatherData | null;
   calendar: CalendarEvent[];
   tasks: Task[];
+  tasksTotal?: number;
   stocks: StockQuote[] | null;
   meta: MetaData | null;
 }
