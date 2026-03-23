@@ -2,11 +2,12 @@ package model
 
 // DashboardResponse is the aggregated response for GET /api/dashboard
 type DashboardResponse struct {
-	Weather  *WeatherData    `json:"weather"`   // null = unavailable
-	Calendar []CalendarEvent `json:"calendar"`
-	Tasks    []Task          `json:"tasks"`
-	Stocks   []StockQuote    `json:"stocks"`    // nil slice = null
-	Meta     *MetaData       `json:"meta"`      // null = unavailable
+	Weather    *WeatherData    `json:"weather"`    // null = unavailable
+	Calendar   []CalendarEvent `json:"calendar"`
+	Tasks      []Task          `json:"tasks"`
+	TasksTotal int             `json:"tasksTotal"`
+	Stocks     []StockQuote    `json:"stocks"`     // nil slice = null
+	Meta       *MetaData       `json:"meta"`       // null = unavailable
 }
 
 // WeatherData holds current weather conditions

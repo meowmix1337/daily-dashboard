@@ -21,7 +21,7 @@ var ErrTaskValidation = apperrors.ErrTaskValidation
 
 // TaskStore defines the data-access contract for tasks.
 type TaskStore interface {
-	List(ctx context.Context, userID string) ([]model.Task, error)
+	List(ctx context.Context, userID string, limit, offset int) ([]model.Task, int, error)
 	Get(ctx context.Context, id string, userID string) (model.Task, error)
 	Create(ctx context.Context, t model.TaskCreate) (model.Task, error)
 	Update(ctx context.Context, id string, userID string, u model.TaskUpdate) error
@@ -38,13 +38,13 @@ func NewTasksService(store TaskStore) *TasksService {
 	return &TasksService{store: store}
 }
 
-// List returns all tasks for the given user.
-func (s *TasksService) List(ctx context.Context, userID string) ([]model.Task, error) {
-	tasks, err := s.store.List(ctx, userID)
+// List returns a page of tasks for the given user along with the total count.
+func (s *TasksService) List(ctx context.Context, userID string, limit, offset int) ([]model.Task, int, error) {
+	tasks, total, err := s.store.List(ctx, userID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("list tasks: %w", err)
+		return nil, 0, fmt.Errorf("list tasks: %w", err)
 	}
-	return tasks, nil
+	return tasks, total, nil
 }
 
 // Create adds a new task for the given user.

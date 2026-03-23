@@ -8,7 +8,7 @@ import (
 
 // TaskRepository defines the data-access contract for tasks.
 type TaskRepository interface {
-	List(ctx context.Context, userID string) ([]model.Task, error)
+	List(ctx context.Context, userID string, limit, offset int) ([]model.Task, int, error)
 	Get(ctx context.Context, id string, userID string) (model.Task, error)
 	Create(ctx context.Context, t model.TaskCreate) (model.Task, error)
 	Update(ctx context.Context, id string, userID string, u model.TaskUpdate) error

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
@@ -31,9 +30,9 @@ func NewUserSettingsHandler(svc *service.UserSettingsService, v *validator.Valid
 // AddRoutes registers user settings routes on the given router.
 func (h *UserSettingsHandler) AddRoutes(r chi.Router) {
 	r.Get("/api/settings", h.Get)
-	r.With(httprate.LimitByIP(10, time.Second)).Put("/api/settings", h.Upsert)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Put("/api/settings", h.Upsert)
 	r.Get("/api/settings/news-categories", h.GetNewsCategories)
-	r.With(httprate.LimitByIP(10, time.Second)).Put("/api/settings/news-categories", h.SetNewsCategories)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Put("/api/settings/news-categories", h.SetNewsCategories)
 }
 
 func (h *UserSettingsHandler) Get(w http.ResponseWriter, r *http.Request) {

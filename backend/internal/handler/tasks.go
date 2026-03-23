@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
@@ -32,9 +32,9 @@ func NewTasksHandler(svc *service.TasksService, v *validator.Validate) *TasksHan
 // AddRoutes registers task routes on the given router.
 func (h *TasksHandler) AddRoutes(r chi.Router) {
 	r.Get("/api/tasks", h.List)
-	r.With(httprate.LimitByIP(10, time.Second)).Post("/api/tasks", h.Create)
-	r.With(httprate.LimitByIP(10, time.Second)).Patch("/api/tasks/{id}", h.Update)
-	r.With(httprate.LimitByIP(10, time.Second)).Delete("/api/tasks/{id}", h.Delete)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Post("/api/tasks", h.Create)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Patch("/api/tasks/{id}", h.Update)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Delete("/api/tasks/{id}", h.Delete)
 }
 
 func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -44,14 +44,36 @@ func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, err := h.service.List(r.Context(), userID)
+	limit := defaultTaskLimit
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if limit > maxTaskLimit {
+		limit = maxTaskLimit
+	}
+
+	offset := 0
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	tasks, total, err := h.service.List(r.Context(), userID, limit, offset)
 	if err != nil {
 		slog.Error("failed to list tasks", "error", err, "user_id", userID)
 		response.WriteError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	response.WriteJSON(w, http.StatusOK, tasksToResponse(tasks))
+	response.WriteJSON(w, http.StatusOK, TaskListResponse{
+		Tasks:  tasksToResponse(tasks),
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	})
 }
 
 func (h *TasksHandler) Create(w http.ResponseWriter, r *http.Request) {

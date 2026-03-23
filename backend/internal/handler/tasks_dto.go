@@ -20,3 +20,11 @@ type TaskResponse struct {
 	Done     bool   `json:"done"`
 	Priority string `json:"priority"`
 }
+
+// TaskListResponse is the paginated JSON response for GET /api/tasks.
+type TaskListResponse struct {
+	Tasks  []TaskResponse `json:"tasks"`
+	Total  int            `json:"total"`
+	Limit  int            `json:"limit"`
+	Offset int            `json:"offset"`
+}
