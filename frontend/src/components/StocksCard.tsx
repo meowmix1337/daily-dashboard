@@ -14,6 +14,7 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
   const { searchQuery, setSearchQuery, results, isSearching } = useSymbolSearch();
 
   const [hoveredSymbol, setHoveredSymbol] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -45,6 +46,8 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
   }, [showAddForm, setSearchQuery]);
 
   const currentSymbols = new Set(stocks.map((s) => s.symbol));
+  const duration = Math.max(8, stocks.length * 4);
+  const marqueeItems = [...stocks, ...stocks];
 
   function yahooFinanceUrl(symbol: string): string {
     const slug = symbol === 'BTC' ? 'BTC-USD' : symbol;
@@ -77,6 +80,13 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
       transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
     }}>
 
+      <style>{`
+        @keyframes argus-ticker-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+
       {/* Label */}
       <div style={{
         display: 'flex',
@@ -101,91 +111,99 @@ export function StocksCard({ stocks: initialStocks, delay = 0 }: StocksCardProps
         )}
       </div>
 
-      {/* Ticker strip — horizontally scrollable */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        flex: 1,
-        overflowX: 'auto',
-        scrollbarWidth: 'none',
-      }}>
+      {/* Ticker strip — animated marquee */}
+      <div
+        style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center' }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
         {stocks.length === 0 ? (
           <span style={{ fontSize: 12, color: 'var(--text-muted)', padding: '0 16px', whiteSpace: 'nowrap' }}>
             No tickers — add one →
           </span>
-        ) : stocks.map((stock, i) => {
-          const isPositive = stock.change >= 0;
-          const changeColor = isPositive ? '#10b981' : '#ef4444';
-          const isHovered = hoveredSymbol === stock.symbol;
-          return (
-            <React.Fragment key={stock.symbol}>
-              {i > 0 && (
-                <span style={{ width: 1, height: 18, background: 'var(--border-subtle)', flexShrink: 0 }} />
-              )}
-              <a
-                href={yahooFinanceUrl(stock.symbol)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onMouseEnter={() => setHoveredSymbol(stock.symbol)}
-                onMouseLeave={() => setHoveredSymbol(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '11px 14px',
-                  textDecoration: 'none',
-                  background: isHovered ? 'var(--bg-elevated)' : 'transparent',
-                  transition: 'background 0.15s',
-                  flexShrink: 0,
-                  cursor: 'pointer',
-                }}
-              >
-                <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                }}>
-                  {stock.symbol}
-                </span>
-                <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--text-clock)',
-                }}>
-                  {formatStockPrice(stock.price, stock.symbol)}
-                </span>
-                <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 11,
-                  color: changeColor,
-                }}>
-                  {isPositive ? '+' : ''}{stock.pct.toFixed(2)}%
-                </span>
-                {/* Remove — always takes space to prevent layout shift */}
-                <button
-                  onClick={(e) => { e.preventDefault(); remove.mutate(stock.symbol); }}
-                  title={`Remove ${stock.symbol}`}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '0 1px',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    lineHeight: 1,
-                    color: 'var(--text-secondary)',
-                    opacity: isHovered ? 0.7 : 0,
-                    transition: 'opacity 0.15s',
-                    flexShrink: 0,
-                  }}
-                >
-                  ×
-                </button>
-              </a>
-            </React.Fragment>
-          );
-        })}
+        ) : (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            width: 'fit-content',
+            animation: `argus-ticker-scroll ${duration}s linear infinite`,
+            animationPlayState: isPaused ? 'paused' : 'running',
+          }}>
+            {marqueeItems.map((stock, i) => {
+              const isPositive = stock.change >= 0;
+              const changeColor = isPositive ? '#10b981' : '#ef4444';
+              const isHovered = hoveredSymbol === stock.symbol;
+              return (
+                <React.Fragment key={`${stock.symbol}-${i}`}>
+                  {i > 0 && (
+                    <span style={{ width: 1, height: 18, background: 'var(--border-subtle)', flexShrink: 0 }} />
+                  )}
+                  <a
+                    href={yahooFinanceUrl(stock.symbol)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onMouseEnter={() => setHoveredSymbol(stock.symbol)}
+                    onMouseLeave={() => setHoveredSymbol(null)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '11px 14px',
+                      textDecoration: 'none',
+                      background: isHovered ? 'var(--bg-elevated)' : 'transparent',
+                      transition: 'background 0.15s',
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                    }}>
+                      {stock.symbol}
+                    </span>
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: 'var(--text-clock)',
+                    }}>
+                      {formatStockPrice(stock.price, stock.symbol)}
+                    </span>
+                    <span style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      color: changeColor,
+                    }}>
+                      {isPositive ? '+' : ''}{stock.pct.toFixed(2)}%
+                    </span>
+                    {/* Remove — always takes space to prevent layout shift */}
+                    <button
+                      onClick={(e) => { e.preventDefault(); remove.mutate(stock.symbol); }}
+                      title={`Remove ${stock.symbol}`}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '0 1px',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        lineHeight: 1,
+                        color: 'var(--text-secondary)',
+                        opacity: isHovered ? 0.7 : 0,
+                        transition: 'opacity 0.15s',
+                        flexShrink: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </a>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Add ticker — anchored to the right */}
