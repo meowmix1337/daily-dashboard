@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
@@ -28,9 +27,9 @@ func NewStocksHandler(svc *service.StocksService, v *validator.Validate) *Stocks
 func (h *StocksHandler) AddRoutes(r chi.Router) {
 	r.Get("/api/stocks", h.Get)
 	r.Get("/api/stocks/watchlist", h.GetWatchlist)
-	r.With(httprate.LimitByIP(10, time.Second)).Post("/api/stocks/watchlist", h.AddSymbol)
-	r.With(httprate.LimitByIP(10, time.Second)).Delete("/api/stocks/watchlist/{symbol}", h.RemoveSymbol)
-	r.With(httprate.LimitByIP(2, time.Second)).Get("/api/stocks/search", h.SearchSymbols)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Post("/api/stocks/watchlist", h.AddSymbol)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Delete("/api/stocks/watchlist/{symbol}", h.RemoveSymbol)
+	r.With(httprate.LimitByIP(searchRateLimit, rateLimitWindow)).Get("/api/stocks/search", h.SearchSymbols)
 }
 
 // Get returns quotes for the current watchlist.

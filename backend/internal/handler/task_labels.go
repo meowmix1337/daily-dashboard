@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
@@ -31,13 +30,13 @@ func NewTaskLabelsHandler(svc *service.TaskLabelsService, v *validator.Validate)
 // AddRoutes registers task label routes on the given router.
 func (h *TaskLabelsHandler) AddRoutes(r chi.Router) {
 	r.Get("/api/labels", h.List)
-	r.With(httprate.LimitByIP(10, time.Second)).Post("/api/labels", h.Create)
-	r.With(httprate.LimitByIP(10, time.Second)).Patch("/api/labels/{id}", h.Update)
-	r.With(httprate.LimitByIP(10, time.Second)).Delete("/api/labels/{id}", h.Delete)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Post("/api/labels", h.Create)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Patch("/api/labels/{id}", h.Update)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Delete("/api/labels/{id}", h.Delete)
 
 	r.Get("/api/tasks/{taskID}/labels", h.ListForTask)
-	r.With(httprate.LimitByIP(10, time.Second)).Post("/api/tasks/{taskID}/labels", h.AssignLabel)
-	r.With(httprate.LimitByIP(10, time.Second)).Delete("/api/tasks/{taskID}/labels/{labelID}", h.RemoveLabel)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Post("/api/tasks/{taskID}/labels", h.AssignLabel)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Delete("/api/tasks/{taskID}/labels/{labelID}", h.RemoveLabel)
 }
 
 func (h *TaskLabelsHandler) List(w http.ResponseWriter, r *http.Request) {

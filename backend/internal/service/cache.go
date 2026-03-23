@@ -49,9 +49,12 @@ func (c *CacheService) Delete(key string) {
 	c.data.Delete(key)
 }
 
-// evict runs every 60 seconds and removes expired entries.
+// cacheEvictInterval is how often the background eviction loop runs.
+const cacheEvictInterval = 60 * time.Second
+
+// evict runs every cacheEvictInterval and removes expired entries.
 func (c *CacheService) evict() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(cacheEvictInterval)
 	defer ticker.Stop()
 	for range ticker.C {
 		now := time.Now()

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
@@ -33,9 +32,9 @@ func NewTasksHandler(svc *service.TasksService, v *validator.Validate) *TasksHan
 // AddRoutes registers task routes on the given router.
 func (h *TasksHandler) AddRoutes(r chi.Router) {
 	r.Get("/api/tasks", h.List)
-	r.With(httprate.LimitByIP(10, time.Second)).Post("/api/tasks", h.Create)
-	r.With(httprate.LimitByIP(10, time.Second)).Patch("/api/tasks/{id}", h.Update)
-	r.With(httprate.LimitByIP(10, time.Second)).Delete("/api/tasks/{id}", h.Delete)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Post("/api/tasks", h.Create)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Patch("/api/tasks/{id}", h.Update)
+	r.With(httprate.LimitByIP(mutationRateLimit, rateLimitWindow)).Delete("/api/tasks/{id}", h.Delete)
 }
 
 func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -45,14 +44,14 @@ func (h *TasksHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit := 5
+	limit := defaultTaskLimit
 	if v := r.URL.Query().Get("limit"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			limit = n
 		}
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > maxTaskLimit {
+		limit = maxTaskLimit
 	}
 
 	offset := 0

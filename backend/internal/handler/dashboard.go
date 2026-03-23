@@ -99,7 +99,7 @@ func (h *DashboardHandler) Get(w http.ResponseWriter, r *http.Request) {
 			slog.Warn("tasks fetch skipped: no session in context")
 			return nil
 		}
-		data, total, err := h.tasks.List(gctx, sess.UserID, 5, 0)
+		data, total, err := h.tasks.List(gctx, sess.UserID, defaultTaskLimit, 0)
 		if err != nil {
 			slog.Warn("tasks fetch failed", "error", err)
 			return nil

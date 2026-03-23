@@ -16,7 +16,6 @@ import (
 	"github.com/meowmix1337/argus/backend/internal/session"
 )
 
-const sessionMaxAge = int(7 * 24 * time.Hour / time.Second) // 7 days in seconds
 
 // AuthHandler serves the Google OAuth login / callback / logout endpoints.
 type AuthHandler struct {
@@ -46,7 +45,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Name:     "oauth_state",
 		Value:    state,
 		Path:     "/",
-		MaxAge:   300, // 5 minutes — just long enough to complete the flow
+		MaxAge:   oauthStateMaxAge,
 		HttpOnly: true,
 		Secure:   h.secureCookies,
 		SameSite: http.SameSiteLaxMode,
@@ -102,7 +101,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Email:     googleUser.Email,
 		Name:      googleUser.Name,
 		AvatarURL: avatarURL,
-		ExpiresAt: time.Now().Add(7 * 24 * time.Hour).Unix(),
+		ExpiresAt: time.Now().Add(sessionDuration).Unix(),
 	})
 	if err != nil {
 		slog.Error("session encode failed", "error", err)
