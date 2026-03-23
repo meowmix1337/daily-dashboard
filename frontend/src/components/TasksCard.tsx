@@ -45,6 +45,7 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
   const [extraTasks, setExtraTasks] = useState<Task[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
   const isLoadingMoreRef = useRef(false);
 
   // Merge first-page tasks with extra pages, deduplicating by ID
@@ -70,6 +71,12 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
       .finally(() => {
         isLoadingMoreRef.current = false;
         setIsLoadingMore(false);
+        // Re-register the sentinel so the observer fires again if it's still visible
+        const el = sentinelRef.current;
+        if (el && observerRef.current) {
+          observerRef.current.unobserve(el);
+          observerRef.current.observe(el);
+        }
       });
   };
 
@@ -79,10 +86,14 @@ export function TasksCard({ tasks, tasksTotal, delay = 0, noGridSpan = false }: 
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting) loadMoreRef.current(); },
-      { rootMargin: '120px' },
+      { threshold: 0 },
     );
+    observerRef.current = observer;
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      observerRef.current = null;
+    };
   }, []);
 
   const taskIds = useMemo(() => allTasks.map((t) => t.id), [allTasks]);
